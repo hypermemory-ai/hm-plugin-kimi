@@ -1,0 +1,44 @@
+{
+  "description": "Enforce HyperMemory recall and delegated end-of-turn persistence in Codex.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/scripts/hypermemory_hook.py session-start",
+            "statusMessage": "Preparing HyperMemory",
+            "timeout": 10,
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/scripts/hypermemory_hook.py user-prompt",
+            "statusMessage": "Recalling HyperMemory context",
+            "timeout": 10,
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/scripts/hypermemory_hook.py stop",
+            "statusMessage": "Delegating HyperMemory finalization",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

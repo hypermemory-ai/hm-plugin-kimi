@@ -1,0 +1,15 @@
+interface:
+  display_name: "HyperMemory"
+  short_description: "Always-on memory for ChatGPT and Codex"
+  default_prompt: "Use $hypermemory to recall context and maintain memory for this turn."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "hypermemory"
+      description: "OAuth-protected HyperMemory graph and token telemetry"
+      transport: "streamable_http"
+      url: "https://stage.hypermemory.io/mcp"
+
+policy:
+  allow_implicit_invocation: true
