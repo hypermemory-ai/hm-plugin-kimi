@@ -1,0 +1,47 @@
+{
+  "name": "hypermemory",
+  "version": "2.1.0",
+  "description": "Always-on, relationship-aware memory for ChatGPT and Codex with OAuth MCP access, delegated persistence, and token telemetry.",
+  "author": {
+    "name": "HyperMemory AI",
+    "email": "hello@runstack.ai",
+    "url": "https://hypermemory.io"
+  },
+  "homepage": "https://hypermemory.io",
+  "repository": "https://github.com/hypermemory-ai/hm-plugins-openai",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "knowledge-graph",
+    "mcp",
+    "oauth",
+    "chatgpt",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "HyperMemory",
+    "shortDescription": "Durable memory for every ChatGPT and Codex turn",
+    "longDescription": "Recall relevant context at the start of work, then delegate durable memory writes, timeline updates, and honest token telemetry to a memory-writer sub-agent. Codex adds lifecycle hooks and exact local session-token deltas; ChatGPT uses uncertainty-labelled estimates.",
+    "developerName": "HyperMemory AI",
+    "category": "Memory & Knowledge",
+    "capabilities": [
+      "Read",
+      "Write",
+      "OAuth",
+      "Subagents"
+    ],
+    "websiteURL": "https://hypermemory.io",
+    "privacyPolicyURL": "https://hypermemory.io/privacy",
+    "termsOfServiceURL": "https://hypermemory.io/terms",
+    "defaultPrompt": [
+      "Recall the context for this work and keep memory current.",
+      "What do you remember about this project?",
+      "Remember this decision and connect it to the project."
+    ],
+    "brandColor": "#2875E5",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

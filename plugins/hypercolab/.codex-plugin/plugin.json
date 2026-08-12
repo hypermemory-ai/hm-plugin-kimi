@@ -1,0 +1,35 @@
+{
+  "name": "hypercolab",
+  "version": "0.1.0",
+  "description": "Coordinate developers and coding agents with project-scoped memory, timelines, work claims, and collision protection.",
+  "author": {
+    "name": "HyperMemory AI",
+    "email": "hello@runstack.ai",
+    "url": "https://hypermemory.io"
+  },
+  "homepage": "https://hypermemory.io",
+  "repository": "https://github.com/hypermemory-ai/hm-plugins-openai",
+  "license": "MIT",
+  "keywords": ["hypermemory", "collaboration", "coding-agents", "mcp", "git"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "HyperColab",
+    "shortDescription": "Keep coding agents coordinated across a project",
+    "longDescription": "Give every developer and coding agent the same project graph, chronological development timeline, active work ownership, and deterministic file-level collision protection.",
+    "developerName": "HyperMemory AI",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://hypermemory.io",
+    "privacyPolicyURL": "https://hypermemory.io/privacy",
+    "termsOfServiceURL": "https://hypermemory.io/terms",
+    "defaultPrompt": [
+      "Join this Hypercolab project and show what everyone is working on",
+      "Claim the files needed for this task before editing",
+      "Summarize recent project decisions and development activity"
+    ],
+    "brandColor": "#2875E5",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}
