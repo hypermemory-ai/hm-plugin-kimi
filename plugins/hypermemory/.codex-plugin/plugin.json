@@ -5,9 +5,9 @@
   "author": {
     "name": "HyperMemory AI",
     "email": "hello@runstack.ai",
-    "url": "https://hypermemory.io"
+    "url": "https://www.hypermemory.io"
   },
-  "homepage": "https://hypermemory.io",
+  "homepage": "https://www.hypermemory.io",
   "repository": "https://github.com/hypermemory-ai/hm-plugins-openai",
   "license": "MIT",
   "keywords": [
@@ -24,15 +24,15 @@
     "displayName": "HyperMemory",
     "shortDescription": "Durable memory for every ChatGPT and Codex turn",
     "longDescription": "Recall relevant context at the start of work, then delegate durable memory writes, timeline updates, and honest token telemetry to a memory-writer sub-agent. Codex adds lifecycle hooks and exact local session-token deltas; ChatGPT uses uncertainty-labelled estimates.",
-    "developerName": "HyperMemory AI",
-    "category": "Memory & Knowledge",
+    "developerName": "Runstack Inc.",
+    "category": "Productivity",
     "capabilities": [
       "Read",
       "Write",
       "OAuth",
       "Subagents"
     ],
-    "websiteURL": "https://hypermemory.io",
+    "websiteURL": "https://www.hypermemory.io",
     "privacyPolicyURL": "https://hypermemory.io/privacy",
     "termsOfServiceURL": "https://hypermemory.io/terms",
     "defaultPrompt": [

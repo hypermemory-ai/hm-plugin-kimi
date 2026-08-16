@@ -348,8 +348,12 @@ def main() -> int:
     inspect_parser = subparsers.add_parser("inspect")
     inspect_parser.add_argument("--job", type=Path, required=True)
     inspect_parser.add_argument("--wait-seconds", type=float, default=2.0)
-    inspect_parser.add_argument("--segments-json", type=str, default=None,
-                                help="JSON array of activity segments (e.g. '[{\"category\":\"coding\",\"weight\":80}]')")
+    inspect_parser.add_argument(
+        "--segments-json",
+        type=str,
+        default=None,
+        help="JSON array of activity segments (e.g. '[{\"category\":\"coding\",\"weight\":80}]')",
+    )
     args = parser.parse_args()
     try:
         if args.command == "baseline":
