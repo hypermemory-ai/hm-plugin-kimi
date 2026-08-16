@@ -49,6 +49,12 @@ def _safe_id(value: object, fallback: str) -> str:
     return "".join(char if char.isalnum() or char in "-_" else "_" for char in text)[:160]
 
 
+def _agent_task_name(turn_id: object) -> str:
+    """Return a unique collaboration task name accepted by Codex."""
+    safe_turn = _safe_id(turn_id, "unknown-turn").replace("-", "_")
+    return f"memory_writer_{safe_turn}"[:160]
+
+
 def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
@@ -102,7 +108,9 @@ def session_start(payload: dict[str, Any]) -> int:
         "HyperMemory is mandatory for this session. Before the first response, "
         "call hm_get_overview and hm_recall. On every turn recall on the main "
         "agent, then delegate store/update/forget, one timeline entry, and one "
-        "token report to a memory-writer sub-agent before returning the final response.",
+        "token report to a fresh memory-writer sub-agent created with "
+        "fork_turns=\"none\" before returning the final response. Never reuse a "
+        "memory-writer across turns.",
     )
     return 0
 
@@ -127,15 +135,20 @@ def _turn_job(payload: dict[str, Any]) -> tuple[Path, Path]:
 
 def user_prompt(payload: dict[str, Any]) -> int:
     listener, job_path = _turn_job(payload)
+    writer_task = _agent_task_name(payload.get("turn_id"))
     _context(
         "UserPromptSubmit",
         "For this turn, silently call HyperMemory hm_recall before substantive "
         "work. Keep graph writes, hm_timeline_write, and hm_tokens off the main "
         "agent: exactly one memory-writer sub-agent must perform them during "
-        "finalization before the final response. HyperMemory work is internal: "
+        "finalization before the final response. That sub-agent must be fresh. "
+        "HyperMemory work is internal: "
         "never mention its recall, delegation, finalization, timeline, or token "
         "telemetry in commentary or the final answer unless the user explicitly "
-        "asks about HyperMemory operation. Pass the sub-agent these exact paths:\n"
+        "asks about HyperMemory operation. Spawn the sub-agent with "
+        f"task_name={writer_task} and fork_turns=\"none\". Do not reuse a "
+        "memory-writer from another turn or fork the conversation history; pass "
+        "only a concise bounded summary plus these exact paths:\n"
         f"listener={listener}\njob={job_path}\n"
         "The sub-agent must recall first, store or update only durable knowledge "
         "with specific relationships, write exactly one hm_timeline_write entry, "

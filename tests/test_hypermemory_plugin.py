@@ -30,6 +30,8 @@ def _write_rollout(
     total: int,
     input_tokens: int,
     output_tokens: int,
+    cached_input_tokens: int | None = None,
+    timestamp: str = "2026-08-12T10:01:00Z",
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     events = [
@@ -40,7 +42,7 @@ def _write_rollout(
         },
         {"type": "event_msg", "payload": {"type": "message", "content": "must not be parsed"}},
         {
-            "timestamp": "2026-08-12T10:01:00Z",
+            "timestamp": timestamp,
             "type": "event_msg",
             "payload": {
                 "type": "token_count",
@@ -48,7 +50,11 @@ def _write_rollout(
                     "model": "gpt-test",
                     "total_token_usage": {
                         "input_tokens": input_tokens,
-                        "cached_input_tokens": max(0, input_tokens - 5),
+                        "cached_input_tokens": (
+                            max(0, input_tokens - 5)
+                            if cached_input_tokens is None
+                            else cached_input_tokens
+                        ),
                         "cache_write_input_tokens": 0,
                         "output_tokens": output_tokens,
                         "reasoning_output_tokens": 3,
@@ -86,7 +92,7 @@ def test_public_marketplace_is_self_contained() -> None:
             "name": "hypermemory",
             "source": {"source": "local", "path": "./plugins/hypermemory"},
             "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
-            "category": "Memory & Knowledge",
+            "category": "Productivity",
         },
         {
             "name": "hypercolab",
@@ -128,6 +134,9 @@ def test_user_prompt_prepares_hidden_job_and_stop_never_continues_turn(tmp_path:
     assert output["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
     assert "exactly one memory-writer sub-agent" in context
     assert "never mention" in context
+    assert 'fork_turns="none"' in context
+    assert "memory_writer_turn_1" in context
+    assert "Do not reuse a memory-writer" in context
     jobs = list((tmp_path / "jobs").glob("turn-*.json"))
     assert len(jobs) == 1
     job = json.loads(jobs[0].read_text())
@@ -172,8 +181,24 @@ def test_listener_aggregates_parent_and_subagent_then_acks(tmp_path: Path, capsy
         assert listener.baseline(baseline_job) == 0
         capsys.readouterr()
 
-        _write_rollout(parent, physical_id="parent", logical_id=logical, total=150, input_tokens=125, output_tokens=25)
-        _write_rollout(child, physical_id="child", logical_id=logical, total=60, input_tokens=45, output_tokens=15)
+        _write_rollout(
+            parent,
+            physical_id="parent",
+            logical_id=logical,
+            total=150,
+            input_tokens=125,
+            output_tokens=25,
+            timestamp="2026-08-12T10:02:00Z",
+        )
+        _write_rollout(
+            child,
+            physical_id="child",
+            logical_id=logical,
+            total=60,
+            input_tokens=45,
+            output_tokens=15,
+            timestamp="2026-08-12T10:03:00Z",
+        )
         job_path = tmp_path / "turn.json"
         job_path.write_text(
             json.dumps(
@@ -193,15 +218,89 @@ def test_listener_aggregates_parent_and_subagent_then_acks(tmp_path: Path, capsy
         report = inspected["hm_tokens_payload"]
         assert inspected["exact_available"] is True
         assert report["measurement_quality"] == "client_exact"
-        assert report["total_tokens"] == 100
-        assert report["input_tokens"] == 80
+        assert report["total_tokens"] == 25
+        assert report["input_tokens"] == 5
         assert report["output_tokens"] == 20
+        assert report["cache_tokens"] == 75
+        assert report["cache_accounting"] == "separate"
+        assert report["timestamp"] == "2026-08-12T10:03:00Z"
 
         assert listener.ack(job_path) == 0
         capsys.readouterr()
         state = json.loads(state_file.read_text())
         assert state["sessions"][logical]["turn_sequence"] == 1
         assert len(state["sessions"][logical]["rollouts"]) == 2
+    finally:
+        if old_codex_home is None:
+            os.environ.pop("CODEX_HOME", None)
+        else:
+            os.environ["CODEX_HOME"] = old_codex_home
+
+
+def test_listener_deduplicates_moved_rollout_and_rejects_fresh_spikes(tmp_path: Path, capsys) -> None:
+    logical = "guarded-session"
+    active = tmp_path / ".codex" / "sessions" / "rollout-shared.jsonl"
+    archived = tmp_path / ".codex" / "archived_sessions" / "rollout-shared.jsonl"
+    _write_rollout(active, physical_id="physical", logical_id=logical, total=100, input_tokens=90, output_tokens=10)
+    _write_rollout(archived, physical_id="physical", logical_id=logical, total=100, input_tokens=90, output_tokens=10)
+    os.utime(archived, ns=(active.stat().st_atime_ns, active.stat().st_mtime_ns + 1))
+
+    state_file = tmp_path / "plugin-data" / "token-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "sessions": {
+                    logical: {
+                        "rollouts": {str(active.resolve()): {
+                            "input_tokens": 90,
+                            "cached_input_tokens": 0,
+                            "cache_write_input_tokens": 0,
+                            "output_tokens": 10,
+                            "reasoning_output_tokens": 3,
+                            "total_tokens": 100,
+                        }},
+                        "turn_sequence": 1,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_rollout(
+        archived,
+        physical_id="physical",
+        logical_id=logical,
+        total=3_100_100,
+        input_tokens=3_000_090,
+        output_tokens=100_010,
+        cached_input_tokens=0,
+    )
+    job = tmp_path / "turn.json"
+    job.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "session_id": logical,
+                "turn_id": "guarded-turn",
+                "transcript_path": str(active),
+                "state_file": str(state_file),
+            }
+        ),
+        encoding="utf-8",
+    )
+    listener = _module(LISTENER, "hypermemory_token_listener_guard_test")
+    old_codex_home = os.environ.get("CODEX_HOME")
+    os.environ["CODEX_HOME"] = str(tmp_path / ".codex")
+    try:
+        assert len(listener._session_rollouts(json.loads(job.read_text()))) == 1
+        assert listener.inspect(job, 0) == 0
+        inspected = json.loads(capsys.readouterr().out)
+        assert inspected["exact_available"] is False
+        assert inspected["reason"] == "fresh_token_safety_limit_exceeded"
+        assert inspected["fresh_total_tokens"] > inspected["safety_limit"]
+        assert not job.with_suffix(".json.claim.json").exists()
     finally:
         if old_codex_home is None:
             os.environ.pop("CODEX_HOME", None)
@@ -253,7 +352,7 @@ def test_baseline_does_not_discard_unreported_resume_tail(tmp_path: Path, capsys
         )
         assert listener.inspect(turn_job, 0) == 0
         inspected = json.loads(capsys.readouterr().out)
-        assert inspected["hm_tokens_payload"]["total_tokens"] == 20
+        assert inspected["hm_tokens_payload"]["total_tokens"] == 5
     finally:
         if old_codex_home is None:
             os.environ.pop("CODEX_HOME", None)

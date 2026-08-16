@@ -34,11 +34,15 @@ information naturally and never re-ask for facts already in memory.
 
 ## Delegate finalization
 
-Before the final response, spawn exactly one memory-writer sub-agent and wait
-for it. Pass a concise summary of the user's request, material actions,
-decisions, corrections, durable facts, and relevant project or component keys.
-The main agent must not call `hm_store`, `hm_update`, `hm_forget`,
-`hm_timeline_write`, or `hm_tokens` when delegation is available.
+Before the final response, spawn exactly one fresh memory-writer sub-agent with
+`fork_turns="none"` and wait for it. Use a unique task name derived from the
+current turn id. Never reuse a memory-writer from an earlier turn and never fork
+the conversation history into it: either behavior repeatedly charges the full
+parent context during the writer's tool continuations. Pass only a concise,
+bounded summary of the user's request, material actions, decisions, corrections,
+durable facts, and relevant project or component keys. The main agent must not
+call `hm_store`, `hm_update`, `hm_forget`, `hm_timeline_write`, or `hm_tokens`
+when delegation is available.
 
 When a `UserPromptSubmit` hook supplies a token-listener job path, pass that
 path and its listener path to the memory-writer. Finalize before returning the
@@ -80,6 +84,9 @@ logical Codex session's parent and sub-agent rollout JSONL files. It never
 returns or uploads prompts, responses, tool arguments, or tool results. It
 reports cumulative-counter deltas as `client_exact`. Tokens written after
 inspection roll into the next successful delta rather than being discarded.
+Cached input is emitted only as `cache_tokens`, not as fresh input or total
+usage. If the listener rejects an implausible fresh-token spike, treat exact
+telemetry as unavailable and follow the bounded self-estimated fallback.
 
 If exact local telemetry is unavailable, submit one honest `self_estimated`
 report with uncertainty and no invented cost. Use the listener's

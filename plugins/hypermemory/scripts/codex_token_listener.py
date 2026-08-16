@@ -28,6 +28,7 @@ COUNTER_FIELDS = (
     "total_tokens",
 )
 ZERO_COUNTERS = {field: 0 for field in COUNTER_FIELDS}
+DEFAULT_MAX_FRESH_TOKENS_PER_TURN = 2_000_000
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -177,14 +178,37 @@ def _session_rollouts(job: dict[str, Any]) -> list[Path]:
         if explicit_path not in candidates:
             candidates.append(explicit_path)
 
-    matches: list[Path] = []
+    matches: dict[str, Path] = {}
     for path in candidates:
         metadata = _session_metadata(path)
         if metadata and session_id in metadata:
-            matches.append(path.resolve())
+            physical_id = metadata[0]
+            resolved = path.resolve()
+            existing = matches.get(physical_id)
+            if existing is None or resolved.stat().st_mtime_ns > existing.stat().st_mtime_ns:
+                matches[physical_id] = resolved
     if not matches:
         raise RuntimeError(f"no Codex rollout transcripts found for session {session_id!r}")
-    return sorted(set(matches))
+    return sorted(matches.values())
+
+
+def _rollout_identity(path: Path) -> str:
+    metadata = _session_metadata(path)
+    return metadata[0] if metadata else path.name
+
+
+def _previous_counter(previous_rollouts: dict[str, Any], path: Path) -> dict[str, int]:
+    """Read stable physical-id checkpoints and migrate legacy path checkpoints."""
+    identity = _rollout_identity(path)
+    if identity in previous_rollouts:
+        return previous_rollouts[identity]
+    resolved = str(path.resolve())
+    if resolved in previous_rollouts:
+        return previous_rollouts[resolved]
+    for key, counters in previous_rollouts.items():
+        if Path(key).name == path.name:
+            return counters
+    return ZERO_COUNTERS
 
 
 def _delta(current: dict[str, int], previous: dict[str, int]) -> dict[str, int]:
@@ -192,6 +216,33 @@ def _delta(current: dict[str, int], previous: dict[str, int]) -> dict[str, int]:
     if any(value < 0 for value in result.values()):
         raise RuntimeError("Codex token counters moved backwards; create a new baseline")
     return result
+
+
+def _fresh_usage(delta: dict[str, int]) -> dict[str, int]:
+    """Separate cache reads from newly processed input and the displayed total."""
+    input_tokens = delta["input_tokens"]
+    cached_tokens = delta["cached_input_tokens"]
+    if cached_tokens > input_tokens:
+        raise RuntimeError("Codex cached input exceeds total input; refusing an unsafe report")
+    fresh_input = input_tokens - cached_tokens
+    return {
+        "input_tokens": fresh_input,
+        "output_tokens": delta["output_tokens"],
+        "cache_tokens": cached_tokens,
+        "reasoning_tokens": delta["reasoning_output_tokens"],
+        "total_tokens": fresh_input + delta["output_tokens"],
+    }
+
+
+def _max_fresh_tokens_per_turn() -> int:
+    raw = os.environ.get("HYPERMEMORY_MAX_FRESH_TOKENS_PER_TURN", "")
+    try:
+        value = int(raw) if raw else DEFAULT_MAX_FRESH_TOKENS_PER_TURN
+    except ValueError as exc:
+        raise RuntimeError("HYPERMEMORY_MAX_FRESH_TOKENS_PER_TURN must be an integer") from exc
+    if value <= 0:
+        raise RuntimeError("HYPERMEMORY_MAX_FRESH_TOKENS_PER_TURN must be positive")
+    return value
 
 
 def baseline(job_path: Path) -> int:
@@ -206,7 +257,7 @@ def baseline(job_path: Path) -> int:
         paths = [Path(str(transcript)).resolve()] if transcript and Path(str(transcript)).is_file() else []
     for path in paths:
         latest = _latest_counter(path)
-        rollouts[str(path)] = (latest or {"counters": ZERO_COUNTERS})["counters"]
+        rollouts[_rollout_identity(path)] = (latest or {"counters": ZERO_COUNTERS})["counters"]
     with _state_lock(state_file):
         state = _state(state_file)
         existing = state["sessions"].get(session_id)
@@ -242,26 +293,29 @@ def inspect(job_path: Path, wait_seconds: float, segments: list[dict] | None = N
     deadline = time.monotonic() + max(0.0, wait_seconds)
     paths = _session_rollouts(job)
 
-    def collect() -> tuple[dict[str, dict[str, int]], dict[str, int], str]:
+    def collect() -> tuple[dict[str, dict[str, int]], dict[str, int], str, str]:
         current_rollouts: dict[str, dict[str, int]] = {}
         combined = ZERO_COUNTERS.copy()
         discovered_model = ""
+        latest_timestamp = ""
         for path in paths:
             latest = _latest_counter(path)
             current = (latest or {"counters": ZERO_COUNTERS})["counters"]
-            current_rollouts[str(path)] = current
-            physical_delta = _delta(current, previous_rollouts.get(str(path)) or ZERO_COUNTERS)
+            current_rollouts[_rollout_identity(path)] = current
+            physical_delta = _delta(current, _previous_counter(previous_rollouts, path))
             for field in COUNTER_FIELDS:
                 combined[field] += physical_delta[field]
             if latest and latest.get("model"):
                 discovered_model = str(latest["model"])
-        return current_rollouts, combined, discovered_model
+            if latest and str(latest.get("timestamp") or "") > latest_timestamp:
+                latest_timestamp = str(latest["timestamp"])
+        return current_rollouts, combined, discovered_model, latest_timestamp
 
-    current_rollouts, delta, discovered_model = collect()
+    current_rollouts, delta, discovered_model, latest_timestamp = collect()
     while delta["total_tokens"] == 0 and time.monotonic() < deadline:
         time.sleep(0.1)
         paths = _session_rollouts(job)
-        current_rollouts, delta, discovered_model = collect()
+        current_rollouts, delta, discovered_model, latest_timestamp = collect()
 
     if delta["total_tokens"] == 0:
         print(
@@ -278,6 +332,29 @@ def inspect(job_path: Path, wait_seconds: float, segments: list[dict] | None = N
         )
         return 0
 
+    usage = _fresh_usage(delta)
+    safety_limit = _max_fresh_tokens_per_turn()
+    if usage["total_tokens"] > safety_limit:
+        print(
+            json.dumps(
+                {
+                    "exact_available": False,
+                    "reason": "fresh_token_safety_limit_exceeded",
+                    "session_id": session_id,
+                    "fresh_total_tokens": usage["total_tokens"],
+                    "cached_input_tokens": usage["cache_tokens"],
+                    "safety_limit": safety_limit,
+                    "fallback_turn_sequence": int(previous_entry.get("turn_sequence") or 0) + 1,
+                    "fallback": (
+                        "Do not submit the rejected counter delta; submit one "
+                        "bounded self-estimate with uncertainty."
+                    ),
+                },
+                indent=2,
+            )
+        )
+        return 0
+
     turn_sequence = int(previous_entry.get("turn_sequence") or 0) + 1
     model = str(job.get("model") or discovered_model or "unknown")
     report = {
@@ -287,14 +364,13 @@ def inspect(job_path: Path, wait_seconds: float, segments: list[dict] | None = N
         "session_id": session_id,
         "turn_sequence": turn_sequence,
         "measurement_quality": "client_exact",
-        "input_tokens": delta["input_tokens"],
-        "output_tokens": delta["output_tokens"],
-        "cache_tokens": delta["cached_input_tokens"],
-        "reasoning_tokens": delta["reasoning_output_tokens"],
-        "total_tokens": delta["total_tokens"],
+        **usage,
+        "cache_accounting": "separate",
         "cost_quality": "unavailable",
         "segments": segments or DEFAULT_SEGMENTS,
     }
+    if latest_timestamp:
+        report["timestamp"] = latest_timestamp
     claim = {
         "version": 1,
         "session_id": session_id,

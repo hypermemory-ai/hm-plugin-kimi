@@ -53,8 +53,8 @@ installable OpenAI plugins:
 
 | Plugin | Package ID | Current version | Purpose |
 | --- | --- | ---: | --- |
-| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.1.0` | Persistent personal and project memory, relationship-aware recall, delegated writes, timeline logging, and token telemetry |
-| **HyperColab** | `hypercolab@hypermemory-ai` | `0.1.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
+| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.5.1` | Persistent personal and project memory, relationship-aware recall, delegated writes, timeline logging, and token telemetry |
+| **HyperColab** | `hypercolab@hypermemory-ai` | `2.5.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
 
 The marketplace is named `hypermemory-ai`. A marketplace is a catalog and
 source of plugins; registering it does **not** install either plugin. Users add
@@ -228,8 +228,10 @@ sequenceDiagram
 
 The main agent performs recall because remembered context must be available
 while reasoning about the user's request. Persistence and telemetry are moved
-to one awaited memory-writer sub-agent to keep the main context focused. The
-role contract prevents recursive delegation.
+to one awaited memory-writer sub-agent to keep the main context focused. Each
+turn uses a fresh, turn-unique writer with `fork_turns="none"`; reusing a writer
+or copying the full parent history would repeatedly charge that context during
+tool continuations. The role contract prevents recursive delegation.
 
 This coordination is deliberately invisible in normal use. HyperMemory does
 not emit status messages, inject synthetic user prompts, or append memory
@@ -297,6 +299,13 @@ Reporting uses a two-phase inspect/ack protocol:
 1. Inspect computes the delta since the last acknowledged checkpoint.
 2. The memory-writer sends that payload to `hm_tokens` exactly once.
 3. Ack advances the checkpoint only after the MCP accepts the report.
+
+Cached input is reported separately in `cache_tokens`; it is excluded from
+`input_tokens` and `total_tokens` so repeated context cannot masquerade as new
+token spend. Rollouts are checkpointed by stable physical session ID so moving
+a transcript into the archive cannot replay its cumulative counter. A bounded
+fresh-token safety limit rejects implausible per-turn spikes instead of sending
+them as exact usage.
 
 If reporting fails, the checkpoint does not advance and usage remains eligible
 for a later retry. Tokens generated after the final inspection are carried into

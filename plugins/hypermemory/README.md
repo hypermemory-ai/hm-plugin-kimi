@@ -7,8 +7,9 @@ separate token-reporting branches for ChatGPT and Codex.
 ## Behavior
 
 - Main agent: overview and recall so memory can inform the response.
-- Memory-writer sub-agent: store, update, forget, timeline write, and one token
-  report before the final response.
+- Memory-writer sub-agent: a fresh, turn-unique worker created without parent
+  conversation history performs store, update, forget, one timeline write, and
+  one token report before the final response.
 - Codex: trusted hooks enforce the lifecycle and read exact cumulative token
   counters from the active rollout JSONL using a two-phase inspect/ack helper.
 - ChatGPT: reports an uncertainty-labelled workload estimate because consumer
@@ -16,6 +17,11 @@ separate token-reporting branches for ChatGPT and Codex.
 
 The token listener parses only `token_count` records. It does not return or
 upload prompts, model responses, tool arguments, or tool results.
+
+Cached reads are reported separately and never included in the fresh-token
+total. Stable rollout identities prevent archived transcripts from being
+counted twice, and an implausible fresh-token spike is rejected before it can
+reach `hm_tokens`.
 
 Codex cannot observe tokens produced after the final tool call of a turn. The
 listener carries that exact tail into the next successful report. If a session

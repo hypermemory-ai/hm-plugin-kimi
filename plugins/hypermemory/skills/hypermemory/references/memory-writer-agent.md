@@ -1,8 +1,10 @@
 # Memory-writer agent contract
 
 The parent agent delegates exactly one bounded finalization task and waits for
-it before returning the user-facing response. The delegated agent must not
-delegate again.
+it before returning the user-facing response. It must create a fresh task with
+`fork_turns="none"` and a turn-unique name. It must not reuse an earlier writer
+or copy the parent conversation history. The delegated agent must not delegate
+again.
 
 The parent supplies a concise turn summary, relevant project or component keys,
 the host name, model, session identifier, and token-listener job paths when

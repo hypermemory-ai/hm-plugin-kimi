@@ -7,7 +7,9 @@ description: Bounded HyperMemory persistence, timeline, and token-reporting role
 
 This is a packaged role contract, not a user-facing skill. The HyperMemory
 skill asks the host to spawn one awaited sub-agent with this role after the main
-agent has completed the requested work.
+agent has completed the requested work. The host must create a fresh,
+turn-unique task with `fork_turns="none"` and provide only a concise bounded
+summary; it must never reuse a writer from an earlier turn.
 
 1. Recall related nodes before changing the graph.
 2. Store durable new knowledge or update the existing canonical node.
