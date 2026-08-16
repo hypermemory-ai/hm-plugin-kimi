@@ -255,8 +255,14 @@ The hosted MCP currently exposes these tool families:
 | Graph writes and hygiene | `hm_store`, `hm_update`, `hm_forget`, `hm_add_relationships`, `hm_ingest`, `hm_list_orphans` |
 | Timeline | `hm_timeline`, `hm_timeline_write` |
 | Files | `hm_upload_file`, `hm_list_files` |
+| Structured data | `hm_tabular` |
 | Skill distribution | `hm_skill` |
 | Telemetry | `hm_tokens` |
+
+All eighteen are the tools the server advertises through `tools/list`, which
+is generated from `rust/contracts/memory-api-v1.json`. `hm_reprocess_file`
+appears in the server's internal tool registry but has no contract entry and
+is not advertised, so it is deliberately absent here.
 
 Writes follow canonical node types and stable keys. The writer recalls before
 changing the graph, updates existing nodes instead of duplicating them, and

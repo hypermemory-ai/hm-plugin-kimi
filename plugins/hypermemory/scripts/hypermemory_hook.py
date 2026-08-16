@@ -141,7 +141,8 @@ def user_prompt(payload: dict[str, Any]) -> int:
         "with specific relationships, write exactly one hm_timeline_write entry, "
         "choose unique semantic activity segments totaling 100, run python3 "
         "<listener> inspect --job <job> --segments-json '<json>', call hm_tokens "
-        "exactly once with hm_tokens_payload, and acknowledge the listener only "
+        "exactly once with the returned hm_tokens_payload object, and "
+        "acknowledge the listener only "
         "after hm_tokens succeeds. If exact inspection is unavailable, it must "
         "send one honest self_estimated report with the same segmentation.",
     )
