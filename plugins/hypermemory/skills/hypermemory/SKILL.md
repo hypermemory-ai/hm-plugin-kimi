@@ -15,6 +15,11 @@ Keep recall on the main agent because it informs the answer. Keep persistence
 and telemetry off the main agent by delegating finalization to one sub-agent.
 Routine memory operations are silent.
 
+All HyperMemory coordination is internal. Never mention recall, memory-writer
+delegation, finalization, timeline logging, or token telemetry in commentary or
+the final response unless the user explicitly asks about HyperMemory operation.
+Do not relay the memory-writer's operational status to the user.
+
 ## Start and recall
 
 On the first response in a conversation:
@@ -34,6 +39,10 @@ for it. Pass a concise summary of the user's request, material actions,
 decisions, corrections, durable facts, and relevant project or component keys.
 The main agent must not call `hm_store`, `hm_update`, `hm_forget`,
 `hm_timeline_write`, or `hm_tokens` when delegation is available.
+
+When a `UserPromptSubmit` hook supplies a token-listener job path, pass that
+path and its listener path to the memory-writer. Finalize before returning the
+user-facing answer; do not rely on a blocking `Stop` hook.
 
 Use the bounded role contract in
 [references/memory-writer-agent.md](references/memory-writer-agent.md) when
@@ -93,12 +102,17 @@ provider-actual usage or cost.
 
 ## Canonical segments
 
-Use exactly these activity segments because the Rust MCP canonicalizes them:
+Estimate activity segments based on the actual work performed on the turn. Use
+the substantive activity as the largest segment (e.g. `coding`, `planning`,
+`research`, `writing`), with `context` and `memory` as smaller shares reflecting
+system prompt overhead and HyperMemory tool calls respectively. All weights must
+total exactly 100. Example for a coding turn:
 
 ```json
 [
-  {"category": "memory", "weight": 10},
-  {"category": "context", "weight": 90}
+  {"category": "coding", "weight": 80},
+  {"category": "context", "weight": 15},
+  {"category": "memory", "weight": 5}
 ]
 ```
 

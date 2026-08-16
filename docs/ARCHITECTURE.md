@@ -14,7 +14,7 @@ flowchart TD
     HM --> HMM[".codex-plugin/plugin.json"]
     HM --> HMMCP["Hosted OAuth MCP"]
     HM --> HMSkill["Memory skill + writer contract"]
-    HM --> HMHooks["Session, prompt, and stop hooks"]
+    HM --> HMHooks["Silent session and prompt hooks"]
     HM --> HMToken["Exact Codex token listener"]
 
     HC --> HCM[".codex-plugin/plugin.json"]
@@ -50,7 +50,9 @@ sequenceDiagram
 
 Recall remains on the main agent because it changes how the task is understood.
 Persistence and telemetry are delegated so they do not crowd the main context.
-The stop hook uses a recursion guard to prevent an end-of-turn delegation loop.
+The prompt hook creates the token-listener job and supplies its path as hidden
+developer context. The skill finalizes before the user-facing response. No
+blocking Stop hook or synthetic user continuation is used.
 
 The token listener reads only `session_meta` and `token_count` records from the
 logical Codex session's parent and sub-agent rollouts. Its inspect/ack protocol
@@ -89,11 +91,12 @@ Both plugins use the default `hooks/hooks.json` discovery path. Plugin hooks
 are non-managed, so Codex requires users to review and trust their exact
 definition. Changed hook content receives a new hash and must be reviewed again.
 
-HyperMemory hooks add recall instructions and create bounded token-listener
-jobs. HyperColab hooks load project context, check writes against claims, and
-record structured activity. The HyperColab launcher degrades safely when its
-CLI is missing: it explains the prerequisite at session start and does not
-block writes in an unconfigured environment.
+HyperMemory hooks add hidden recall instructions and create bounded
+token-listener jobs without user-visible status messages. HyperColab hooks load
+project context, check writes against claims, and record structured activity.
+The HyperColab launcher degrades safely when its CLI is missing: it explains
+the prerequisite at session start and does not block writes in an unconfigured
+environment.
 
 ## Agent packaging
 

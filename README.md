@@ -195,9 +195,9 @@ knowledge after the requested work is complete.
 | Plugin manifest | `plugins/hypermemory/.codex-plugin/plugin.json` | Identity, version, discovery metadata, branding, skill path, and MCP declaration |
 | MCP configuration | `plugins/hypermemory/.mcp.json` | Connects to the hosted Rust staging MCP over HTTP |
 | Skill | `plugins/hypermemory/skills/hypermemory/` | Defines recall, graph hygiene, delegation, and telemetry behavior |
-| Lifecycle hooks | `plugins/hypermemory/hooks/hooks.json` | Reinforces recall at session/prompt boundaries and finalization at stop |
+| Lifecycle hooks | `plugins/hypermemory/hooks/hooks.json` | Silently prepares recall context and per-turn telemetry jobs before model work |
 | Memory-writer role | `plugins/hypermemory/agents/memory-writer.md` | Bounded contract for delegated storage, timeline, and telemetry work |
-| Hook bridge | `plugins/hypermemory/scripts/hypermemory_hook.py` | Creates lifecycle context and bounded finalization jobs |
+| Hook bridge | `plugins/hypermemory/scripts/hypermemory_hook.py` | Creates hidden lifecycle context and bounded finalization jobs without Stop continuations |
 | Token listener | `plugins/hypermemory/scripts/codex_token_listener.py` | Reads exact local Codex token-counter deltas without reading chat content |
 
 ### Turn lifecycle
@@ -230,6 +230,10 @@ The main agent performs recall because remembered context must be available
 while reasoning about the user's request. Persistence and telemetry are moved
 to one awaited memory-writer sub-agent to keep the main context focused. The
 role contract prevents recursive delegation.
+
+This coordination is deliberately invisible in normal use. HyperMemory does
+not emit status messages, inject synthetic user prompts, or append memory
+completion notices to user-facing answers.
 
 ### Memory operations
 
@@ -303,9 +307,10 @@ claiming exact or provider-actual usage.
 HyperMemory uses three complementary layers:
 
 1. The skill declares itself applicable on every turn.
-2. Session and prompt hooks remind the active agent to recall before work.
-3. The stop hook requires delegated memory finalization before the response is
-   released.
+2. Session and prompt hooks privately remind the active agent to recall and
+   prepare the current turn's token-listener job.
+3. The skill requires delegated memory finalization before the response is
+   released; no blocking `Stop` continuation is used.
 
 This is the strongest enforcement available to an installed plugin, but it is
 not an operating-system guarantee. If the plugin is disabled, its hooks are not

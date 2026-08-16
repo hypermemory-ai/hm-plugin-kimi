@@ -223,7 +223,14 @@ def baseline(job_path: Path) -> int:
     return 0
 
 
-def inspect(job_path: Path, wait_seconds: float) -> int:
+DEFAULT_SEGMENTS = [
+    {"category": "coding", "weight": 80},
+    {"category": "context", "weight": 15},
+    {"category": "memory", "weight": 5},
+]
+
+
+def inspect(job_path: Path, wait_seconds: float, segments: list[dict] | None = None) -> int:
     job = _read_json(job_path)
     state_file = Path(str(job["state_file"]))
     session_id = str(job.get("session_id") or "unknown-session")
@@ -286,10 +293,7 @@ def inspect(job_path: Path, wait_seconds: float) -> int:
         "reasoning_tokens": delta["reasoning_output_tokens"],
         "total_tokens": delta["total_tokens"],
         "cost_quality": "unavailable",
-        "segments": [
-            {"category": "memory", "weight": 10},
-            {"category": "context", "weight": 90},
-        ],
+        "segments": segments or DEFAULT_SEGMENTS,
     }
     claim = {
         "version": 1,
@@ -344,12 +348,15 @@ def main() -> int:
     inspect_parser = subparsers.add_parser("inspect")
     inspect_parser.add_argument("--job", type=Path, required=True)
     inspect_parser.add_argument("--wait-seconds", type=float, default=2.0)
+    inspect_parser.add_argument("--segments-json", type=str, default=None,
+                                help="JSON array of activity segments (e.g. '[{\"category\":\"coding\",\"weight\":80}]')")
     args = parser.parse_args()
     try:
         if args.command == "baseline":
             return baseline(args.job)
         if args.command == "inspect":
-            return inspect(args.job, args.wait_seconds)
+            segs = json.loads(args.segments_json) if args.segments_json else None
+            return inspect(args.job, args.wait_seconds, segments=segs)
         return ack(args.job)
     except (KeyError, OSError, RuntimeError, TypeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)

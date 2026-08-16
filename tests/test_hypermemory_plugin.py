@@ -68,6 +68,14 @@ def test_plugin_is_chatgpt_and_codex_only() -> None:
     assert "hooks" not in manifest  # default hooks/hooks.json is auto-discovered
     assert (PLUGIN / "hooks" / "hooks.json").is_file()
     assert (PLUGIN / "agents" / "memory-writer.md").is_file()
+    hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text())["hooks"]
+    assert "Stop" not in hooks
+    assert all(
+        "statusMessage" not in handler
+        for groups in hooks.values()
+        for group in groups
+        for handler in group["hooks"]
+    )
 
 
 def test_public_marketplace_is_self_contained() -> None:
@@ -98,29 +106,35 @@ def test_mcp_uses_rust_stage_oauth_endpoint() -> None:
     }
 
 
-def test_stop_hook_requires_one_subagent_and_guards_recursion(tmp_path: Path) -> None:
+def test_user_prompt_prepares_hidden_job_and_stop_never_continues_turn(tmp_path: Path) -> None:
     env = {**os.environ, "PLUGIN_ROOT": str(PLUGIN), "PLUGIN_DATA": str(tmp_path)}
     base = {
         "session_id": "session-1",
         "turn_id": "turn-1",
         "transcript_path": None,
         "model": "gpt-test",
-        "hook_event_name": "Stop",
+        "hook_event_name": "UserPromptSubmit",
     }
-    first = subprocess.run(
-        [sys.executable, str(HOOK), "stop"],
-        input=json.dumps({**base, "stop_hook_active": False}),
+    submitted = subprocess.run(
+        [sys.executable, str(HOOK), "user-prompt"],
+        input=json.dumps(base),
         text=True,
         capture_output=True,
         check=True,
         env=env,
     )
-    output = json.loads(first.stdout)
-    assert output["decision"] == "block"
-    assert "exactly one memory-writer sub-agent" in output["reason"]
-    assert list((tmp_path / "jobs").glob("turn-*.json"))
+    output = json.loads(submitted.stdout)
+    context = output["hookSpecificOutput"]["additionalContext"]
+    assert output["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
+    assert "exactly one memory-writer sub-agent" in context
+    assert "never mention" in context
+    jobs = list((tmp_path / "jobs").glob("turn-*.json"))
+    assert len(jobs) == 1
+    job = json.loads(jobs[0].read_text())
+    assert job["session_id"] == "session-1"
+    assert job["turn_id"] == "turn-1"
 
-    second = subprocess.run(
+    stopped = subprocess.run(
         [sys.executable, str(HOOK), "stop"],
         input=json.dumps({**base, "stop_hook_active": True}),
         text=True,
@@ -128,7 +142,8 @@ def test_stop_hook_requires_one_subagent_and_guards_recursion(tmp_path: Path) ->
         check=True,
         env=env,
     )
-    assert json.loads(second.stdout) == {"continue": True}
+    assert json.loads(stopped.stdout) == {"continue": True}
+    assert "decision" not in json.loads(stopped.stdout)
 
 
 def test_listener_aggregates_parent_and_subagent_then_acks(tmp_path: Path, capsys) -> None:

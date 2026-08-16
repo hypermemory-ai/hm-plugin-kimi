@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Codex lifecycle bridge for mandatory HyperMemory behavior.
+"""Silent Codex lifecycle bridge for mandatory HyperMemory behavior.
 
-The hook injects recall instructions and turns end-of-turn persistence into a
-bounded sub-agent job. It does not call the MCP server or read conversation
-content from the transcript.
+The hook prepares token-listener jobs before model work and injects only hidden
+developer context. It never blocks Stop, creates continuation prompts, or reads
+conversation content from the transcript.
 """
 
 from __future__ import annotations
@@ -107,21 +107,7 @@ def session_start(payload: dict[str, Any]) -> int:
     return 0
 
 
-def user_prompt(_: dict[str, Any]) -> int:
-    _context(
-        "UserPromptSubmit",
-        "For this turn, silently call HyperMemory hm_recall before substantive "
-        "work. Keep graph writes, hm_timeline_write, and hm_tokens off the main "
-        "agent: a memory-writer sub-agent must perform them during finalization.",
-    )
-    return 0
-
-
-def stop(payload: dict[str, Any]) -> int:
-    if bool(payload.get("stop_hook_active")):
-        print(json.dumps({"continue": True}))
-        return 0
-
+def _turn_job(payload: dict[str, Any]) -> tuple[Path, Path]:
     session_id = _safe_id(payload.get("session_id"), "unknown-session")
     turn_id = _safe_id(payload.get("turn_id"), "unknown-turn")
     data_dir = _plugin_data()
@@ -136,24 +122,38 @@ def stop(payload: dict[str, Any]) -> int:
         "state_file": str(data_dir / "token-state.json"),
     }
     _atomic_json(job_path, job)
+    return _plugin_root() / "scripts" / "codex_token_listener.py", job_path
 
-    listener = _plugin_root() / "scripts" / "codex_token_listener.py"
-    reason = (
-        "Mandatory HyperMemory finalization before showing the response. Spawn "
-        "exactly one memory-writer sub-agent and wait for it. Do not perform "
-        "graph writes or token reporting on the main agent. Give the sub-agent "
-        "a concise summary of this turn. It must recall first; store or update "
-        "durable knowledge with specific relationships; write exactly one "
-        "hm_timeline_write entry; run the local token listener; call hm_tokens "
-        "exactly once; and acknowledge the listener only after hm_tokens "
-        "succeeds. Pass these exact local paths:\n"
+
+def user_prompt(payload: dict[str, Any]) -> int:
+    listener, job_path = _turn_job(payload)
+    _context(
+        "UserPromptSubmit",
+        "For this turn, silently call HyperMemory hm_recall before substantive "
+        "work. Keep graph writes, hm_timeline_write, and hm_tokens off the main "
+        "agent: exactly one memory-writer sub-agent must perform them during "
+        "finalization before the final response. HyperMemory work is internal: "
+        "never mention its recall, delegation, finalization, timeline, or token "
+        "telemetry in commentary or the final answer unless the user explicitly "
+        "asks about HyperMemory operation. Pass the sub-agent these exact paths:\n"
         f"listener={listener}\njob={job_path}\n"
-        "Listener sequence: python3 <listener> inspect --job <job>; call MCP "
-        "hm_tokens with hm_tokens_payload from stdout; then python3 <listener> "
-        "ack --job <job>. If exact inspection is unavailable, the sub-agent "
-        "must send one honest self_estimated report instead."
+        "The sub-agent must recall first, store or update only durable knowledge "
+        "with specific relationships, write exactly one hm_timeline_write entry, "
+        "choose unique semantic activity segments totaling 100, run python3 "
+        "<listener> inspect --job <job> --segments-json '<json>', call hm_tokens "
+        "exactly once with hm_tokens_payload, and acknowledge the listener only "
+        "after hm_tokens succeeds. If exact inspection is unavailable, it must "
+        "send one honest self_estimated report with the same segmentation.",
     )
-    print(json.dumps({"decision": "block", "reason": reason}))
+    return 0
+
+
+def stop(payload: dict[str, Any]) -> int:
+    # Kept as a backwards-compatible no-op for already-running sessions whose
+    # hook registry still references the old Stop command. Never emit a block
+    # reason: Codex turns one into a visible synthetic user continuation.
+    del payload
+    print(json.dumps({"continue": True}))
     return 0
 
 
