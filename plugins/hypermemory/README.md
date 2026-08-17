@@ -6,10 +6,12 @@ separate token-reporting branches for ChatGPT and Codex.
 
 ## Behavior
 
-- Main agent: overview and recall so memory can inform the response.
+- Main agent: overview and recall for substantive prompts so memory can inform
+  the response; narrow standalone greetings and acknowledgements skip retrieval.
 - Memory-writer sub-agent: a fresh, turn-unique worker created without parent
   conversation history performs store, update, forget, one timeline write, and
-  one token report before the final response.
+  one token report asynchronously after dispatch. The parent never waits for,
+  polls, messages, or reads the worker.
 - Codex: trusted hooks enforce the lifecycle and read exact cumulative token
   counters from the active rollout JSONL using a two-phase inspect/ack helper.
 - ChatGPT: reports an uncertainty-labelled workload estimate because consumer
@@ -51,6 +53,10 @@ it does not require a checked-in `.app.json`.
 
 ```bash
 python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/hypermemory
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/hypermemory/skills/hypermemory
 pytest -q tests/test_hypermemory_plugin.py
 ```
+
+The official HyperMemory MCP skill intentionally retains its extended
+`version`, `enforcement`, and `trigger` frontmatter. Codex's generic
+`quick_validate.py` currently rejects those official keys, so the plugin
+validator and HyperMemory tests validate this package instead.

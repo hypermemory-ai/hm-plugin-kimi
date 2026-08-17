@@ -13,8 +13,10 @@ their manifests.
 - Keep `.codex-plugin/plugin.json` as the required manifest entry point.
 - Keep MCP credentials out of source. Use OAuth or local credential storage.
 - Preserve explicit hook trust and safe degraded behavior.
-- Keep HyperMemory recall on the main agent and persistence/token reporting on
-  one awaited memory-writer sub-agent.
+- Keep HyperMemory recall on the main agent for substantive prompts and skip it
+  only for narrowly classified lightweight social prompts.
+- Keep persistence/token reporting on one fresh fire-and-forget memory-writer
+  sub-agent; the main agent must never wait, poll, inspect, or message it.
 - Keep HyperColab join/sync/claims on the main agent. Delegated coordination
   writers may record progress but must not bypass ownership conflicts.
 

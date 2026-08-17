@@ -74,6 +74,12 @@ def test_plugin_is_chatgpt_and_codex_only() -> None:
     assert "hooks" not in manifest  # default hooks/hooks.json is auto-discovered
     assert (PLUGIN / "hooks" / "hooks.json").is_file()
     assert (PLUGIN / "agents" / "memory-writer.md").is_file()
+    skill = (PLUGIN / "skills" / "hypermemory" / "SKILL.md").read_text()
+    assert skill.startswith("---\nname: hypermemory\nversion: 0.6.8\n")
+    assert "enforcement: mandatory\ntrigger: every_turn\n---" in skill
+    assert "# HyperMemory MCP — Agent Protocol" in skill
+    assert "## Style Contract" in skill
+    assert "## Hyperedge policy (enforced server-side)" in skill
     hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text())["hooks"]
     assert "Stop" not in hooks
     assert all(
@@ -119,6 +125,7 @@ def test_user_prompt_prepares_hidden_job_and_stop_never_continues_turn(tmp_path:
         "turn_id": "turn-1",
         "transcript_path": None,
         "model": "gpt-test",
+        "prompt": "Fix CI",
         "hook_event_name": "UserPromptSubmit",
     }
     submitted = subprocess.run(
@@ -132,11 +139,12 @@ def test_user_prompt_prepares_hidden_job_and_stop_never_continues_turn(tmp_path:
     output = json.loads(submitted.stdout)
     context = output["hookSpecificOutput"]["additionalContext"]
     assert output["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
-    assert "exactly one memory-writer sub-agent" in context
-    assert "never mention" in context
+    assert "mode=substantive" in context
+    assert "exactly one fresh memory-writer" in context
     assert 'fork_turns="none"' in context
     assert "memory_writer_turn_1" in context
-    assert "Do not reuse a memory-writer" in context
+    assert "Fire-and-forget" in context
+    assert "do not wait" in context
     jobs = list((tmp_path / "jobs").glob("turn-*.json"))
     assert len(jobs) == 1
     job = json.loads(jobs[0].read_text())
@@ -153,6 +161,35 @@ def test_user_prompt_prepares_hidden_job_and_stop_never_continues_turn(tmp_path:
     )
     assert json.loads(stopped.stdout) == {"continue": True}
     assert "decision" not in json.loads(stopped.stdout)
+
+
+def test_lightweight_prompt_classifier_is_narrow(tmp_path: Path) -> None:
+    hook = _module(HOOK, "hypermemory_hook_classifier_test")
+    for prompt in ("hey", "Hey!", " thank you ", "okay."):
+        assert hook._is_lightweight_prompt(prompt)
+    for prompt in ("Fix CI", "Redis?", "hey, can you fix CI?", "x" * 81):
+        assert not hook._is_lightweight_prompt(prompt)
+
+    env = {**os.environ, "PLUGIN_ROOT": str(PLUGIN), "PLUGIN_DATA": str(tmp_path)}
+    payload = {
+        "session_id": "session-1",
+        "turn_id": "turn-lightweight",
+        "transcript_path": None,
+        "model": "gpt-test",
+        "prompt": "hey",
+        "hook_event_name": "UserPromptSubmit",
+    }
+    submitted = subprocess.run(
+        [sys.executable, str(HOOK), "user-prompt"],
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+        env=env,
+    )
+    context = json.loads(submitted.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "mode=lightweight" in context
+    assert "skip hm_get_overview and hm_recall" in context
 
 
 def test_listener_aggregates_parent_and_subagent_then_acks(tmp_path: Path, capsys) -> None:

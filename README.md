@@ -211,10 +211,11 @@ sequenceDiagram
     participant L as Codex token listener
 
     U->>M: Submit a prompt
-    M->>MCP: Overview and relevant recall
+    M->>MCP: Overview and recall for substantive prompts
     MCP-->>M: Relationship-aware context
     M->>M: Complete the requested work
-    M->>W: Delegate a concise finalization summary
+    M-)W: Dispatch a concise finalization summary
+    M-->>U: Return final response without waiting
     W->>MCP: Recall before writing
     W->>MCP: Store or update durable knowledge
     W->>MCP: Write one timeline entry
@@ -222,16 +223,16 @@ sequenceDiagram
     L-->>W: Exact payload or fallback instruction
     W->>MCP: Report tokens once
     W->>L: Acknowledge accepted exact claim
-    W-->>M: Return brief status
-    M-->>U: Return final response
 ```
 
-The main agent performs recall because remembered context must be available
-while reasoning about the user's request. Persistence and telemetry are moved
-to one awaited memory-writer sub-agent to keep the main context focused. Each
-turn uses a fresh, turn-unique writer with `fork_turns="none"`; reusing a writer
-or copying the full parent history would repeatedly charge that context during
-tool continuations. The role contract prevents recursive delegation.
+The main agent performs recall for substantive prompts because remembered
+context must be available while reasoning about the user's request. Narrow,
+standalone greetings and acknowledgements skip retrieval. Persistence and
+telemetry move to one fire-and-forget memory-writer sub-agent so they do not
+delay the user-facing response. Each turn uses a fresh, turn-unique writer with
+`fork_turns="none"`; reusing a writer or copying the full parent history would
+repeatedly charge that context during tool continuations. The role contract
+prevents recursive delegation.
 
 This coordination is deliberately invisible in normal use. HyperMemory does
 not emit status messages, inject synthetic user prompts, or append memory
@@ -624,7 +625,7 @@ The tests cover:
 
 - catalog-to-plugin path and identity consistency;
 - required manifests, MCP declarations, hooks, skills, and assets;
-- HyperMemory stop-hook delegation and recursion protection;
+- HyperMemory prompt classification and fire-and-forget writer delegation;
 - exact token aggregation and two-phase checkpointing;
 - HyperColab hook behavior, Git discovery, cached leases, and queued events;
 - logo format and dimensions; and
@@ -638,10 +639,13 @@ python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py \
 python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py \
   plugins/hypercolab
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
-  plugins/hypermemory/skills/hypermemory
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
   plugins/hypercolab/skills/hypercolab
 ```
+
+The official HyperMemory MCP skill retains its extended `version`,
+`enforcement`, and `trigger` frontmatter, which the generic skill validator
+does not currently accept. The HyperMemory plugin validator and repository
+tests cover that package without stripping its official metadata.
 
 ### Build review archives
 

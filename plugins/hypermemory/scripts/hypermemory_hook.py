@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Silent Codex lifecycle bridge for mandatory HyperMemory behavior.
 
-The hook prepares token-listener jobs before model work and injects only hidden
-developer context. It never blocks Stop, creates continuation prompts, or reads
-conversation content from the transcript.
+The hook classifies lightweight prompts, prepares token-listener jobs before
+model work, and injects concise hidden developer context. It never blocks Stop,
+creates continuation prompts, or reads conversation content from the transcript.
 """
 
 from __future__ import annotations
@@ -11,11 +11,28 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+LIGHTWEIGHT_MAX_CHARS = 80
+LIGHTWEIGHT_PHRASES = frozenset({"got it", "hello", "hey", "hi", "howdy", "ok", "okay", "thank you", "thanks"})
+
+
+def _prompt_text(payload):
+    return payload.get("prompt") or ""
+
+
+def _normalize_prompt(text):
+    text = text.casefold().replace("’", "'")
+    return " ".join(re.sub(r"[^\w\s']+", " ", text).split())
+
+
+def _is_lightweight_prompt(text):
+    return bool(text) and len(text) <= LIGHTWEIGHT_MAX_CHARS and _normalize_prompt(text) in LIGHTWEIGHT_PHRASES
 
 
 def _read_input() -> dict[str, Any]:
@@ -105,12 +122,9 @@ def session_start(payload: dict[str, Any]) -> int:
 
     _context(
         "SessionStart",
-        "HyperMemory is mandatory for this session. Before the first response, "
-        "call hm_get_overview and hm_recall. On every turn recall on the main "
-        "agent, then delegate store/update/forget, one timeline entry, and one "
-        "token report to a fresh memory-writer sub-agent created with "
-        "fork_turns=\"none\" before returning the final response. Never reuse a "
-        "memory-writer across turns.",
+        "HyperMemory is active. Follow the HyperMemory skill and each turn's "
+        "prompt classification. Do not recall solely because the session started. "
+        "Memory-writers are fire-and-forget: dispatch once, never wait or poll.",
     )
     return 0
 
@@ -136,28 +150,25 @@ def _turn_job(payload: dict[str, Any]) -> tuple[Path, Path]:
 def user_prompt(payload: dict[str, Any]) -> int:
     listener, job_path = _turn_job(payload)
     writer_task = _agent_task_name(payload.get("turn_id"))
+    lightweight = _is_lightweight_prompt(_prompt_text(payload))
+    recall_instruction = (
+        "mode=lightweight; skip hm_get_overview and hm_recall on the main agent."
+        if lightweight
+        else "mode=substantive; call hm_recall before substantive work and call "
+        "hm_get_overview first if it has not run in this conversation."
+    )
     _context(
         "UserPromptSubmit",
-        "For this turn, silently call HyperMemory hm_recall before substantive "
-        "work. Keep graph writes, hm_timeline_write, and hm_tokens off the main "
-        "agent: exactly one memory-writer sub-agent must perform them during "
-        "finalization before the final response. That sub-agent must be fresh. "
-        "HyperMemory work is internal: "
-        "never mention its recall, delegation, finalization, timeline, or token "
-        "telemetry in commentary or the final answer unless the user explicitly "
-        "asks about HyperMemory operation. Spawn the sub-agent with "
-        f"task_name={writer_task} and fork_turns=\"none\". Do not reuse a "
-        "memory-writer from another turn or fork the conversation history; pass "
-        "only a concise bounded summary plus these exact paths:\n"
+        f"HyperMemory turn: {recall_instruction}\n"
+        "Apply the HyperMemory skill silently. Keep graph writes and telemetry "
+        "off the main agent. "
+        "Before the final response, spawn exactly one fresh memory-writer with "
+        f"task_name={writer_task}, fork_turns=\"none\", a bounded turn summary, "
+        "and the skill's writer contract. Pass:\n"
         f"listener={listener}\njob={job_path}\n"
-        "The sub-agent must recall first, store or update only durable knowledge "
-        "with specific relationships, write exactly one hm_timeline_write entry, "
-        "choose unique semantic activity segments totaling 100, run python3 "
-        "<listener> inspect --job <job> --segments-json '<json>', call hm_tokens "
-        "exactly once with the returned hm_tokens_payload object, and "
-        "acknowledge the listener only "
-        "after hm_tokens succeeds. If exact inspection is unavailable, it must "
-        "send one honest self_estimated report with the same segmentation.",
+        "Fire-and-forget: after spawn succeeds, do not wait, poll, inspect, read, "
+        "message, or otherwise synchronize with the writer; return the final "
+        "response immediately.",
     )
     return 0
 
