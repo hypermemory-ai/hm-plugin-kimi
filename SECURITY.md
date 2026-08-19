@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Do not open a public issue for a vulnerability, credential exposure, or tenant
-isolation concern. Email `hello@runstack.ai` with a concise description,
+isolation concern. Email `info@hypermemory.io` with a concise description,
 affected component, reproduction steps, and impact. Do not include live access
 tokens or personal data.
 

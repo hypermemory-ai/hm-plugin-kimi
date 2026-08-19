@@ -125,9 +125,10 @@ workspace testing. Public one-click installation for normal ChatGPT and Codex
 users requires publishing through the universal Plugins Directory.
 
 For pre-publication HyperMemory testing in ChatGPT developer mode, register
-`https://stage.hypermemory.io/mcp` and use the bundled HyperMemory skill. Since
-consumer ChatGPT does not expose Codex rollout JSONL counters, HyperMemory uses
-an uncertainty-labelled token estimate there.
+`https://stage.hypermemory.io/mcp` and use the bundled HyperMemory main skill
+plus its parent-only memory-writer skill. Since consumer ChatGPT does not expose
+Codex rollout JSONL counters, HyperMemory uses an uncertainty-labelled token
+estimate there.
 
 HyperColab's full behavior depends on its local stdio shim and Git context. It
 therefore requires a local coding surface that can execute `hypercolab`; a web

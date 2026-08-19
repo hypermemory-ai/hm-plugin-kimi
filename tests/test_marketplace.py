@@ -22,6 +22,8 @@ def test_marketplace_entries_resolve_to_complete_plugins() -> None:
         assert (plugin / manifest["mcpServers"].removeprefix("./")).is_file()
         assert (plugin / "hooks" / "hooks.json").is_file()
         assert (plugin / "skills" / entry["name"] / "SKILL.md").is_file()
+        if entry["name"] == "hypermemory":
+            assert (plugin / "skills" / "memory-writer" / "SKILL.md").is_file()
         assert (plugin / "agents").is_dir()
         assert entry["policy"] == {"installation": "AVAILABLE", "authentication": "ON_INSTALL"}
 

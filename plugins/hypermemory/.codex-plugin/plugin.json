@@ -1,10 +1,10 @@
 {
   "name": "hypermemory",
-  "version": "2.5.1",
+  "version": "2.8.0",
   "description": "Always-on, relationship-aware memory for ChatGPT and Codex with OAuth MCP access, delegated persistence, and token telemetry.",
   "author": {
     "name": "HyperMemory AI",
-    "email": "hello@runstack.ai",
+    "email": "info@hypermemory.io",
     "url": "https://www.hypermemory.io"
   },
   "homepage": "https://www.hypermemory.io",

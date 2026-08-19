@@ -1,8 +1,9 @@
 # HyperMemory plugin for ChatGPT and Codex
 
-This universal plugin bundles one ChatGPT/Codex skill, the OAuth-protected
-HyperMemory MCP server, and Codex lifecycle enforcement. The shared skill has
-separate token-reporting branches for ChatGPT and Codex.
+This universal plugin bundles a slim ChatGPT/Codex main-agent skill, a
+parent-only memory-writer skill with a detailed role contract, the
+OAuth-protected HyperMemory MCP server, and Codex lifecycle enforcement. The
+writer has separate token-reporting branches for ChatGPT and Codex.
 
 ## Behavior
 
@@ -53,10 +54,7 @@ it does not require a checked-in `.app.json`.
 
 ```bash
 python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/hypermemory
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/hypermemory/skills/hypermemory
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/hypermemory/skills/memory-writer
 pytest -q tests/test_hypermemory_plugin.py
 ```
-
-The official HyperMemory MCP skill intentionally retains its extended
-`version`, `enforcement`, and `trigger` frontmatter. Codex's generic
-`quick_validate.py` currently rejects those official keys, so the plugin
-validator and HyperMemory tests validate this package instead.

@@ -13,7 +13,8 @@ flowchart TD
 
     HM --> HMM[".codex-plugin/plugin.json"]
     HM --> HMMCP["Hosted OAuth MCP"]
-    HM --> HMSkill["Memory skill + writer contract"]
+    HM --> HMSkill["Slim main-agent skill"]
+    HM --> HMWRole["Parent-only memory-writer skill + detailed role"]
     HM --> HMHooks["Silent session and prompt hooks"]
     HM --> HMToken["Exact Codex token listener"]
 
@@ -38,14 +39,13 @@ sequenceDiagram
     M->>MCP: overview + recall
     MCP-->>M: Relevant graph context
     M->>M: Perform the requested work
-    M->>W: Bounded finalization summary
+    M-)W: Bounded finalization summary
+    M-->>U: Final response without waiting
     W->>MCP: recall, store/update, timeline
     W->>L: inspect exact counter delta
     L-->>W: hm_tokens payload
     W->>MCP: one token report
     W->>L: acknowledge accepted claim
-    W-->>M: Brief status
-    M-->>U: Final response
 ```
 
 Recall remains on the main agent because it changes how the task is understood.
@@ -102,9 +102,12 @@ environment.
 
 The current OpenAI plugin manifest supports skills, MCP servers, apps, hooks,
 and presentation assets; it does not define a separate auto-installed custom
-agent registry. Each plugin therefore ships its agent role as a skill reference:
+agent registry. HyperMemory therefore exposes a slim implicit main skill and a
+second parent-only `$memory-writer` skill whose implicit invocation is disabled.
+The main skill passes that writer skill to a fresh host sub-agent:
 
-- `memory-writer-agent.md` defines HyperMemory finalization.
+- `plugins/hypermemory/agents/memory-writer.md` defines HyperMemory finalization;
+  `$memory-writer` points hosts to that canonical contract.
 - `coordination-agent.md` defines delegated HyperColab timeline maintenance.
 
 The skills instruct the host when to spawn these bounded roles, what context to

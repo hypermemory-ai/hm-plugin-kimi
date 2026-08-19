@@ -23,7 +23,8 @@ LIGHTWEIGHT_PHRASES = frozenset({"got it", "hello", "hey", "hi", "howdy", "ok", 
 
 
 def _prompt_text(payload):
-    return payload.get("prompt") or ""
+    prompt = payload.get("prompt")
+    return prompt if isinstance(prompt, str) else ""
 
 
 def _normalize_prompt(text):
@@ -160,11 +161,11 @@ def user_prompt(payload: dict[str, Any]) -> int:
     _context(
         "UserPromptSubmit",
         f"HyperMemory turn: {recall_instruction}\n"
-        "Apply the HyperMemory skill silently. Keep graph writes and telemetry "
+        "Apply the HyperMemory skill. Keep graph writes and telemetry "
         "off the main agent. "
         "Before the final response, spawn exactly one fresh memory-writer with "
         f"task_name={writer_task}, fork_turns=\"none\", a bounded turn summary, "
-        "and the skill's writer contract. Pass:\n"
+        "and explicit use of the $memory-writer skill. Pass:\n"
         f"listener={listener}\njob={job_path}\n"
         "Fire-and-forget: after spawn succeeds, do not wait, poll, inspect, read, "
         "message, or otherwise synchronize with the writer; return the final "

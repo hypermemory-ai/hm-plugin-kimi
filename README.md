@@ -20,7 +20,7 @@
 
 > [!IMPORTANT]
 > This repository is the Git-backed development marketplace for ChatGPT and
-> Codex. HyperMemory currently connects to the Rust staging MCP at
+> Codex. HyperMemory currently connects to the hosted staging MCP at
 > `https://stage.hypermemory.io/mcp`. Public, one-click installation for normal
 > ChatGPT and Codex users requires separate publication of each plugin through
 > OpenAI's universal Plugins Directory.
@@ -53,8 +53,8 @@ installable OpenAI plugins:
 
 | Plugin | Package ID | Current version | Purpose |
 | --- | --- | ---: | --- |
-| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.5.1` | Persistent personal and project memory, relationship-aware recall, delegated writes, timeline logging, and token telemetry |
-| **HyperColab** | `hypercolab@hypermemory-ai` | `2.5.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
+| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.8.0` | Persistent personal and project memory, relationship-aware recall, delegated writes, timeline logging, and token telemetry |
+| **HyperColab** | `hypercolab@hypermemory-ai` | `2.8.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
 
 The marketplace is named `hypermemory-ai`. A marketplace is a catalog and
 source of plugins; registering it does **not** install either plugin. Users add
@@ -87,7 +87,7 @@ coordination, add coordination only where needed, or run both together.
 | --- | :---: | :---: |
 | Hosted OAuth MCP | Yes | No |
 | Local stdio MCP shim | No | Yes |
-| Bundled skill | Yes | Yes |
+| Bundled skills | Main agent + memory writer | Coordination |
 | Codex lifecycle hooks | Yes | Yes |
 | Packaged sub-agent role contract | Memory writer | Coordination writer |
 | Relationship-aware graph | Personal and cross-session | Project-scoped |
@@ -193,10 +193,11 @@ knowledge after the requested work is complete.
 | Component | Path | Responsibility |
 | --- | --- | --- |
 | Plugin manifest | `plugins/hypermemory/.codex-plugin/plugin.json` | Identity, version, discovery metadata, branding, skill path, and MCP declaration |
-| MCP configuration | `plugins/hypermemory/.mcp.json` | Connects to the hosted Rust staging MCP over HTTP |
-| Skill | `plugins/hypermemory/skills/hypermemory/` | Defines recall, graph hygiene, delegation, and telemetry behavior |
+| MCP configuration | `plugins/hypermemory/.mcp.json` | Connects to the hosted staging MCP over HTTP |
+| Main-agent skill | `plugins/hypermemory/skills/hypermemory/` | Defines recall and fire-and-forget delegation behavior |
+| Memory-writer skill | `plugins/hypermemory/skills/memory-writer/` | Parent-only finalization workflow with implicit invocation disabled |
 | Lifecycle hooks | `plugins/hypermemory/hooks/hooks.json` | Silently prepares recall context and per-turn telemetry jobs before model work |
-| Memory-writer role | `plugins/hypermemory/agents/memory-writer.md` | Bounded contract for delegated storage, timeline, and telemetry work |
+| Memory-writer role | `plugins/hypermemory/agents/memory-writer.md` | Detailed contract for delegated graph hygiene, storage, timeline, and telemetry work |
 | Hook bridge | `plugins/hypermemory/scripts/hypermemory_hook.py` | Creates hidden lifecycle context and bounded finalization jobs without Stop continuations |
 | Token listener | `plugins/hypermemory/scripts/codex_token_listener.py` | Reads exact local Codex token-counter deltas without reading chat content |
 
@@ -262,10 +263,8 @@ The hosted MCP currently exposes these tool families:
 | Skill distribution | `hm_skill` |
 | Telemetry | `hm_tokens` |
 
-All eighteen are the tools the server advertises through `tools/list`, which
-is generated from `rust/contracts/memory-api-v1.json`. `hm_reprocess_file`
-appears in the server's internal tool registry but has no contract entry and
-is not advertised, so it is deliberately absent here.
+These are the public tools currently advertised by the hosted MCP through
+`tools/list`. Internal-only operations are deliberately absent.
 
 Writes follow canonical node types and stable keys. The writer recalls before
 changing the graph, updates existing nodes instead of duplicating them, and
@@ -280,9 +279,10 @@ The plugin connects to:
 https://stage.hypermemory.io/mcp
 ```
 
-The server supports authorization-code OAuth, PKCE S256, refresh tokens, and
-dynamic client registration. The plugin package contains the server URL only;
-it does not contain or require a checked-in API key.
+The hosted MCP supports authorization-code OAuth with PKCE and refresh tokens.
+ChatGPT and Codex own client metadata, callback selection, and credential
+storage for their surface. The plugin package contains only the server URL; it
+does not contain or require a checked-in API key.
 
 ### Codex token telemetry
 
@@ -503,7 +503,7 @@ repository-specific coordination state.
 │   │   ├── assets/                        # Marketplace icon and logo
 │   │   ├── hooks/hooks.json               # Codex lifecycle hooks
 │   │   ├── scripts/                       # Hook bridge and token listener
-│   │   └── skills/hypermemory/            # Memory workflow and references
+│   │   └── skills/                        # Main-agent and parent-only writer skills
 │   └── hypercolab/
 │       ├── .codex-plugin/plugin.json      # HyperColab manifest
 │       ├── .mcp.json                      # Local stdio MCP registration
@@ -639,13 +639,12 @@ python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py \
 python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py \
   plugins/hypercolab
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+  plugins/hypermemory/skills/hypermemory
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
+  plugins/hypermemory/skills/memory-writer
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py \
   plugins/hypercolab/skills/hypercolab
 ```
-
-The official HyperMemory MCP skill retains its extended `version`,
-`enforcement`, and `trigger` frontmatter, which the generic skill validator
-does not currently accept. The HyperMemory plugin validator and repository
-tests cover that package without stripping its official metadata.
 
 ### Build review archives
 
@@ -803,7 +802,7 @@ universal Plugins Directory.
 
 ### Is the MCP endpoint production?
 
-No. The checked-in HyperMemory configuration currently targets the Rust staging
+No. The checked-in HyperMemory configuration currently targets the hosted staging
 endpoint. Treat the package as pre-production until the manifest and docs are
 updated to a production MCP URL.
 

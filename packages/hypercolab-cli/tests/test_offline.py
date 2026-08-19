@@ -17,7 +17,7 @@ def _configure_paths(monkeypatch, tmp_path):
 
 def test_live_cached_lease_is_honored_only_until_expiry(monkeypatch, tmp_path):
     _configure_paths(monkeypatch, tmp_path)
-    remote = "git@github.com:runstack-ai/example.git"
+    remote = "git@github.com:example-org/example.git"
     operation = {"path": "src/auth/token.py", "operation": "modify"}
     remember_repository(remote, project={"project_id": "p1"}, session={"session_id": "s1"})
     remember_check(
@@ -44,7 +44,7 @@ def test_git_queue_retries_and_removes_delivered_events(monkeypatch, tmp_path):
     queued = {
         "git": {
             "root": str(tmp_path),
-            "remote": "git@github.com:runstack-ai/example.git",
+            "remote": "git@github.com:example-org/example.git",
             "branch": "colab",
             "worktree": str(tmp_path),
         },

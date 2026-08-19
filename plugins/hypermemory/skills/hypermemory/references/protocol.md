@@ -1,4 +1,7 @@
-# HyperMemory write protocol
+# HyperMemory writer quick reference
+
+The full writer role is `../../../agents/memory-writer.md`. This file is only a
+compact lookup for the most failure-sensitive graph rules.
 
 - Recall before writing. Update an existing node instead of creating a duplicate.
 - Use canonical node types: `user`, `person`, `organization`, `component`,
