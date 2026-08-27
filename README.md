@@ -53,7 +53,7 @@ installable OpenAI plugins:
 
 | Plugin | Package ID | Current version | Purpose |
 | --- | --- | ---: | --- |
-| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.8.0` | Persistent personal and project memory, relationship-aware recall, delegated writes, timeline logging, and token telemetry |
+| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.9.0` | Persistent personal and project memory, relationship-aware recall, quality-gated delegated writes, timeline logging, and token telemetry |
 | **HyperColab** | `hypercolab@hypermemory-ai` | `2.8.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
 
 The marketplace is named `hypermemory-ai`. A marketplace is a catalog and
@@ -197,7 +197,7 @@ knowledge after the requested work is complete.
 | Main-agent skill | `plugins/hypermemory/skills/hypermemory/` | Defines recall and fire-and-forget delegation behavior |
 | Memory-writer skill | `plugins/hypermemory/skills/memory-writer/` | Parent-only finalization workflow with implicit invocation disabled |
 | Lifecycle hooks | `plugins/hypermemory/hooks/hooks.json` | Silently prepares recall context and per-turn telemetry jobs before model work |
-| Memory-writer role | `plugins/hypermemory/agents/memory-writer.md` | Detailed contract for delegated graph hygiene, storage, timeline, and telemetry work |
+| Memory-writer role | `plugins/hypermemory/agents/memory-writer.md` | Parent-only agent entry point that loads the versioned memory-writer skill |
 | Hook bridge | `plugins/hypermemory/scripts/hypermemory_hook.py` | Creates hidden lifecycle context and bounded finalization jobs without Stop continuations |
 | Token listener | `plugins/hypermemory/scripts/codex_token_listener.py` | Reads exact local Codex token-counter deltas without reading chat content |
 

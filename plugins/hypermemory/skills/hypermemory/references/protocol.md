@@ -1,18 +1,13 @@
-# HyperMemory writer quick reference
+# HyperMemory quality quick reference
 
-The full writer role is `../../../agents/memory-writer.md`. This file is only a
-compact lookup for the most failure-sensitive graph rules.
+The main protocol is `../SKILL.md`; the writer's sole detailed contract is
+`../../memory-writer/SKILL.md`.
 
-- Recall before writing. Update an existing node instead of creating a duplicate.
-- Use canonical node types: `user`, `person`, `organization`, `component`,
-  `event`, `decision`, `concept`, `artifact`, `project`, `technology`,
-  `preference`, `fact`, or `skill`.
-- Shape keys as `{type}_{name}`. Use `user_profile` for the primary user.
-- Never store passwords, API keys, OAuth tokens, credentials, or large code blobs.
-- Give each stored node a specific relationship that explains why it connects
-  to a project, component, person, organization, or decision.
-- Use `hm_ingest` only for dense multi-entity text. Immediately call
-  `hm_list_orphans`; connect useful orphans with `hm_add_relationships` and
-  delete unenriched noise with `hm_forget`.
-- Use `hm_find_related` for traversal and `hm_get_nodes` to hydrate exact keys.
-- Use `hm_upload_file` only when the user explicitly asks to store a file.
+- Scope recall to the active project and current intent.
+- Ignore `chat_*` relationships for semantic reasoning.
+- Prefer exact hydration when canonical keys are known.
+- Send the writer a bounded versioned contract, not conversation history.
+- Empty durable-candidate lists are normal.
+- Keep temporary blockers, task mechanics, command output, and recoverable
+  repository state in the timeline rather than the durable graph.
+- Never wait for, poll, inspect, read, message, or reuse the writer.

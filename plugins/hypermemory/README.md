@@ -1,18 +1,20 @@
 # HyperMemory plugin for ChatGPT and Codex
 
-This universal plugin bundles a slim ChatGPT/Codex main-agent skill, a
-parent-only memory-writer skill with a detailed role contract, the
-OAuth-protected HyperMemory MCP server, and Codex lifecycle enforcement. The
-writer has separate token-reporting branches for ChatGPT and Codex.
+This universal plugin bundles a ChatGPT/Codex main-agent skill, a parent-only
+memory-writer skill with a strict quality gate, the OAuth-protected HyperMemory
+MCP server, and Codex lifecycle enforcement. The writer has separate
+token-reporting branches for ChatGPT and Codex.
 
 ## Behavior
 
-- Main agent: overview and recall for substantive prompts so memory can inform
-  the response; narrow standalone greetings and acknowledgements skip retrieval.
+- Main agent: project-scoped recall for substantive prompts, exact hydration
+  when keys are known, and a relevance gate that rejects unrelated projects and
+  session-only relationships. Narrow standalone greetings and acknowledgements
+  skip retrieval.
 - Memory-writer sub-agent: a fresh, turn-unique worker created without parent
-  conversation history performs store, update, forget, one timeline write, and
-  one token report asynchronously after dispatch. The parent never waits for,
-  polls, messages, or reads the worker.
+  conversation history applies a durability gate, performs only justified graph
+  changes, validates every changed node, writes one timeline entry, and reports
+  tokens once. The parent never waits for, polls, messages, or reads the worker.
 - Codex: trusted hooks enforce the lifecycle and read exact cumulative token
   counters from the active rollout JSONL using a two-phase inspect/ack helper.
 - ChatGPT: reports an uncertainty-labelled workload estimate because consumer
