@@ -101,6 +101,11 @@ pipx upgrade hypercolab
 Start a new task after updating. If a hook changed, Codex will require review of
 the new definition because hook trust is tied to its exact content.
 
+When moving from HyperMemory 2.9.1 to 2.9.2, fully quit Codex before the update
+and reopen it afterward. Version 2.9.1 stored a version-specific executable path
+in running tasks. HyperMemory 2.9.2 resolves the currently installed version at
+hook execution time so later updates do not retain that deleted cache path.
+
 ## Removal
 
 ```bash

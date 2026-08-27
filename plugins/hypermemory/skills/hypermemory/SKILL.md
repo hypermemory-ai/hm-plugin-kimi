@@ -120,7 +120,7 @@ Send a bounded contract with this shape:
 
 ```json
 {
-  "schema_version": "2.9.1",
+  "schema_version": "2.9.2",
   "turn_id": "host-supplied unique id",
   "occurred_at": "ISO-8601 timestamp when available",
   "active_scope": {

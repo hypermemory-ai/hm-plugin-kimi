@@ -18,7 +18,9 @@ token-reporting branches for ChatGPT and Codex.
 - Codex: trusted hooks enforce the lifecycle and read exact cumulative token
   counters from the active rollout JSONL using a two-phase inspect/ack helper.
   If local lifecycle preparation fails, the hook reports the problem and fails
-  open so it cannot block the user's chat.
+  open so it cannot block the user's chat. Its command resolves the currently
+  installed plugin version at execution time, so a running task does not retain
+  an executable path into a deleted previous-version cache directory.
 - ChatGPT: reports an uncertainty-labelled workload estimate because consumer
   ChatGPT does not expose a stable local exact-usage file to plugins.
 

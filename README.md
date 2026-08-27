@@ -53,7 +53,7 @@ installable OpenAI plugins:
 
 | Plugin | Package ID | Current version | Purpose |
 | --- | --- | ---: | --- |
-| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.9.1` | Persistent personal and project memory, relationship-aware recall, quality-gated delegated writes, timeline logging, and token telemetry |
+| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.9.2` | Persistent personal and project memory, relationship-aware recall, quality-gated delegated writes, timeline logging, and token telemetry |
 | **HyperColab** | `hypercolab@hypermemory-ai` | `2.8.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
 
 The marketplace is named `hypermemory-ai`. A marketplace is a catalog and
@@ -584,6 +584,14 @@ Review hooks again if their definitions changed.
 HyperMemory lifecycle preparation fails open: a local hook error is reported
 for diagnosis, but the hook returns valid non-blocking output so the user's
 turn continues without claiming that lifecycle or token preparation succeeded.
+Hook commands resolve the currently installed plugin version at execution time,
+so updating the plugin cannot leave an active task pointing at a deleted cache
+directory from the previous version.
+
+For the one-time update from HyperMemory 2.9.1 to 2.9.2, fully quit Codex before
+upgrading, then reopen it, start a new task, and trust the changed hooks. Version
+2.9.1 still used the old version-bound command, so an already-running 2.9.1 task
+cannot acquire the new resolver until it is restarted.
 
 ## Removing
 
