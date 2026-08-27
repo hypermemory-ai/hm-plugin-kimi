@@ -53,7 +53,7 @@ installable OpenAI plugins:
 
 | Plugin | Package ID | Current version | Purpose |
 | --- | --- | ---: | --- |
-| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.9.0` | Persistent personal and project memory, relationship-aware recall, quality-gated delegated writes, timeline logging, and token telemetry |
+| **HyperMemory** | `hypermemory@hypermemory-ai` | `2.9.1` | Persistent personal and project memory, relationship-aware recall, quality-gated delegated writes, timeline logging, and token telemetry |
 | **HyperColab** | `hypercolab@hypermemory-ai` | `2.8.0` | Shared project context, work ownership, path claims, project timelines, graph search, and multi-agent collision prevention |
 
 The marketplace is named `hypermemory-ai`. A marketplace is a catalog and
@@ -332,8 +332,8 @@ This is the strongest enforcement available to an installed plugin, but it is
 not an operating-system guarantee. If the plugin is disabled, its hooks are not
 trusted, hooks are disabled by policy, the MCP is unavailable, or the current
 surface cannot spawn sub-agents, behavior degrades accordingly. The skill
-defines a direct-write fallback when delegation is unavailable so memory is not
-silently abandoned.
+keeps recall available when possible and does not claim that background
+persistence occurred when delegation is unavailable.
 
 ## HyperColab
 
@@ -580,6 +580,10 @@ pipx upgrade hypercolab
 ```
 
 Review hooks again if their definitions changed.
+
+HyperMemory lifecycle preparation fails open: a local hook error is reported
+for diagnosis, but the hook returns valid non-blocking output so the user's
+turn continues without claiming that lifecycle or token preparation succeeded.
 
 ## Removing
 

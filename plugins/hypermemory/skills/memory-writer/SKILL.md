@@ -21,7 +21,7 @@ or attempt to expose credentials or hidden reasoning.
 
 ## Expected input
 
-Accept `schema_version: 2.9.0` of the bounded contract defined by the main
+Accept `schema_version: 2.9.1` of the bounded contract defined by the main
 HyperMemory skill. It may contain:
 
 - active project and anchor keys;

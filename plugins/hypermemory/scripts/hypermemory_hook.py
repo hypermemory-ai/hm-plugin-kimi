@@ -96,6 +96,20 @@ def _context(event: str, text: str) -> None:
     )
 
 
+def _fail_open(event: str, exc: Exception) -> int:
+    """Keep the user's turn available when local lifecycle preparation fails."""
+    print(f"HyperMemory hook degraded: {type(exc).__name__}: {exc}", file=sys.stderr)
+    hook_event = "SessionStart" if event == "session-start" else "UserPromptSubmit"
+    _context(
+        hook_event,
+        "HyperMemory lifecycle preparation was unavailable for this event. "
+        "Continue the user's request without blocking the turn. Apply the "
+        "HyperMemory skill directly if it is available, and do not claim that "
+        "local lifecycle or token preparation succeeded.",
+    )
+    return 0
+
+
 def session_start(payload: dict[str, Any]) -> int:
     session_id = _safe_id(payload.get("session_id"), "unknown-session")
     state_file = _plugin_data() / "token-state.json"
@@ -194,9 +208,8 @@ def main() -> int:
         if args.event == "user-prompt":
             return user_prompt(payload)
         return stop(payload)
-    except (OSError, RuntimeError, TypeError) as exc:
-        print(f"HyperMemory hook error: {exc}", file=sys.stderr)
-        return 1
+    except Exception as exc:
+        return _fail_open(args.event, exc)
 
 
 if __name__ == "__main__":

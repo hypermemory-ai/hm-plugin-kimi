@@ -17,6 +17,8 @@ token-reporting branches for ChatGPT and Codex.
   tokens once. The parent never waits for, polls, messages, or reads the worker.
 - Codex: trusted hooks enforce the lifecycle and read exact cumulative token
   counters from the active rollout JSONL using a two-phase inspect/ack helper.
+  If local lifecycle preparation fails, the hook reports the problem and fails
+  open so it cannot block the user's chat.
 - ChatGPT: reports an uncertainty-labelled workload estimate because consumer
   ChatGPT does not expose a stable local exact-usage file to plugins.
 
