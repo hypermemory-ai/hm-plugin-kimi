@@ -263,12 +263,15 @@ When the parent supplies a Codex listener and job path:
 1. inspect the job using the supplied listener and honest activity segments;
 2. submit the returned `hm_tokens_payload` once;
 3. acknowledge the job only after HyperMemory accepts that payload;
-4. if exact usage is unavailable, submit one uncertainty-labelled estimate and
-   follow the listener's fallback instructions.
+4. if exact usage is unavailable, submit one honest estimate and follow the
+   listener's fallback instructions. Include uncertainty only when it can be
+   estimated defensibly.
 
-Without an exact listener, submit one `self_estimated` report with an honest
-uncertainty percentage and estimation bias. Never invent an account identifier,
-provider event, exact cost, or exact token count.
+Without an exact listener, submit one `self_estimated` report. Both
+`uncertainty_percentage` and `cost_usd` are optional: include them only when
+they can be determined defensibly, and otherwise omit them. Use
+`cost_quality: unavailable` when no cost is supplied. Never invent an account
+identifier, provider event, exact cost, exact token count, or uncertainty.
 
 Activity categories must be unique and total 100. The substantive activity
 (`coding`, `writing`, `research`, `planning`, and so on) should outweigh memory

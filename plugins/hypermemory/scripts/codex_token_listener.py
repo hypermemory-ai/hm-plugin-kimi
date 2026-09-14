@@ -325,7 +325,10 @@ def inspect(job_path: Path, wait_seconds: float, segments: list[dict] | None = N
                     "reason": "no_new_token_count_record",
                     "session_id": session_id,
                     "fallback_turn_sequence": int(previous_entry.get("turn_sequence") or 0) + 1,
-                    "fallback": "Submit one self_estimated hm_tokens report with uncertainty.",
+                    "fallback": (
+                        "Submit one self_estimated hm_tokens report; optional uncertainty "
+                        "and cost must be omitted when unknown."
+                    ),
                 },
                 indent=2,
             )
