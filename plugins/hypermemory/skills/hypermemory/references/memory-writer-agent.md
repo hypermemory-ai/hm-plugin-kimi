@@ -5,8 +5,7 @@ detailed writer contract and includes durability, relationship, validation,
 timeline, and token-reporting rules. Do not copy the parent conversation
 history.
 
-In Codex, create a fresh turn-unique task with `collaboration.spawn_agent` and
-`fork_turns="none"`. Supply the versioned bounded contract and any listener/job
-paths emitted by the lifecycle hook. After dispatch, return immediately without
-waiting, polling, inspecting, reading, messaging, interrupting, or reusing the
-writer.
+In Kimi Code, dispatch a fresh turn-unique sub-agent with the Agent tool and
+`run_in_background=true`. Supply the versioned bounded contract as the task
+description. After dispatch, return immediately without waiting, polling,
+inspecting, reading, messaging, interrupting, or reusing the writer.

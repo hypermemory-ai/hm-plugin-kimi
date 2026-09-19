@@ -1,4 +1,4 @@
-# HyperColab for ChatGPT and Codex
+# HyperColab for Kimi Code
 
 HyperColab coordinates developers and coding agents around the Git repository
 they are actually working in. It combines a project graph, chronological
@@ -7,24 +7,29 @@ protection.
 
 ## Included
 
-- `.mcp.json` registers the local `hypercolab mcp` stdio shim.
+- `kimi.plugin.json` declares the local `hypercolab mcp` stdio shim inline,
+  the coordination skill, the coordination-writer agent, and lifecycle hooks.
 - `skills/hypercolab/` defines join, sync, claim, update, and finish behavior.
-- `hooks/hooks.json` loads project context, checks write ownership, and records
-  structured development activity after explicit Codex trust.
+- Hooks load project context, check write ownership, and record structured
+  development activity while the plugin is enabled.
 - `scripts/hypercolab_hook.py` provides a safe launcher when the CLI is absent.
-- `agents/coordination-writer.md` defines the bounded timeline-writer role used
-  by the skill.
+- `agents/coordination-writer.md` defines the bounded timeline-writer role.
 
 ## Install
 
 ```bash
 pipx install "git+https://github.com/hypermemory-ai/hm-plugins-openai.git#subdirectory=packages/hypercolab-cli"
 hypercolab login
-codex plugin marketplace add hypermemory-ai/hm-plugins-openai
-codex plugin add hypercolab@hypermemory-ai
 ```
 
-Start a new task and review the plugin hooks with `/hooks`. HyperMemory's
+Then in a Kimi Code session:
+
+```text
+/plugins install ./plugins/hypercolab
+/reload
+```
+
+Start a new task inside a Git repository enrolled in HyperColab. HyperMemory's
 personal memory MCP remains a separate plugin and can be installed alongside
 HyperColab.
 

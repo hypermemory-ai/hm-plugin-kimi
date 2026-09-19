@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for improving the HyperMemory AI OpenAI plugins.
+Thank you for improving the HyperMemory AI Kimi Code plugins.
 
 ## Development setup
 
@@ -21,16 +21,18 @@ pytest -q
 python scripts/build_plugin_archives.py
 ```
 
-Also run the Codex plugin and skill validators listed in the root README when
-available.
+Then sanity-check both plugins in a live session: `/plugins install
+./plugins/hypermemory`, `/plugins info hypermemory`, `/plugins reload`, and
+confirm the diagnostics are clean.
 
 ## Release checklist
 
-1. Increment the changed plugin's semantic version.
-2. Confirm marketplace name, plugin ID, folder name, and manifest name match.
-3. Validate every referenced asset, skill, hook, and MCP path.
-4. Review hook commands for safe failure behavior and explicit trust.
+1. Increment the changed plugin's semantic version in `kimi.plugin.json`.
+2. Confirm the plugin id, folder name, and marketplace entry id match.
+3. Validate every referenced asset, skill, agent, hook, and MCP declaration.
+4. Review hook commands for safe failure behavior (fail-open) and plugin-root
+   relative paths.
 5. Confirm no credentials, tokens, test accounts, or private endpoints entered
    the package.
-6. Build fresh review ZIPs and test installation in a new Codex task.
+6. Build fresh review ZIPs and test installation in a new Kimi Code session.
 7. Document user-visible changes.

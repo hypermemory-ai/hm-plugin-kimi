@@ -1,8 +1,8 @@
 # Architecture
 
 The repository contains one marketplace catalog and two independently
-installable plugins. Shared branding and distribution live at the repository
-level; runtime behavior remains isolated by plugin.
+installable Kimi Code plugins. Shared branding and distribution live at the
+repository level; runtime behavior remains isolated by plugin.
 
 ## Package topology
 
@@ -11,16 +11,16 @@ flowchart TD
     Marketplace[".agents/plugins/marketplace.json"] --> HM["plugins/hypermemory"]
     Marketplace --> HC["plugins/hypercolab"]
 
-    HM --> HMM[".codex-plugin/plugin.json"]
+    HM --> HMM["kimi.plugin.json"]
     HM --> HMMCP["Hosted OAuth MCP"]
     HM --> HMSkill["Slim main-agent skill"]
-    HM --> HMWRole["Parent-only memory-writer skill + detailed role"]
+    HM --> HMWRole["Parent-only memory-writer skill + agent"]
     HM --> HMHooks["Silent session and prompt hooks"]
-    HM --> HMToken["Exact Codex token listener"]
+    HM --> HMPrompt["SYSTEM.md plugin instructions"]
 
-    HC --> HCM[".codex-plugin/plugin.json"]
+    HC --> HCM["kimi.plugin.json"]
     HC --> HCMCP["Local stdio MCP registration"]
-    HC --> HCSkill["Coordination skill + writer contract"]
+    HC --> HCSkill["Coordination skill + writer agent"]
     HC --> HCHooks["Join, claims, and activity hooks"]
     HCMCP --> CLI["packages/hypercolab-cli"]
 ```
@@ -33,31 +33,27 @@ sequenceDiagram
     participant M as Main agent
     participant MCP as HyperMemory MCP
     participant W as Memory-writer sub-agent
-    participant L as Codex token listener
 
     U->>M: Prompt
     M->>MCP: overview + recall
     MCP-->>M: Relevant graph context
     M->>M: Perform the requested work
-    M-)W: Bounded finalization summary
+    M-)W: Bounded finalization summary (background dispatch)
     M-->>U: Final response without waiting
     W->>MCP: recall, store/update, timeline
-    W->>L: inspect exact counter delta
-    L-->>W: hm_tokens payload
-    W->>MCP: one token report
-    W->>L: acknowledge accepted claim
+    W->>MCP: one self-estimated token report
 ```
 
 Recall remains on the main agent because it changes how the task is understood.
 Persistence and telemetry are delegated so they do not crowd the main context.
-The prompt hook creates the token-listener job and supplies its path as hidden
-developer context. The skill finalizes before the user-facing response. No
-blocking Stop hook or synthetic user continuation is used.
+The main agent dispatches the writer with the Agent tool and
+`run_in_background=true`; the fire-and-forget invariant forbids waiting,
+polling, or messaging the writer. No blocking Stop hook or synthetic user
+continuation is used.
 
-The token listener reads only `session_meta` and `token_count` records from the
-logical Codex session's parent and sub-agent rollouts. Its inspect/ack protocol
-does not advance the checkpoint until the MCP accepts the report. Tokens that
-appear after inspection roll into the next successful report.
+Kimi Code does not expose local exact-usage counters to plugins. The writer
+therefore submits one honest `self_estimated` token report per turn, with
+optional uncertainty and cost fields omitted unless defensibly known.
 
 ## HyperColab lifecycle
 
@@ -85,14 +81,18 @@ agent cannot choose another project's graph or timeline identifier. Redis holds
 short-lived sessions, claims, and leases; the project graph and append-only
 timeline remain the durable systems of record.
 
-## Hooks and trust
+## Hooks
 
-Both plugins use the default `hooks/hooks.json` discovery path. Plugin hooks
-are non-managed, so Codex requires users to review and trust their exact
-definition. Changed hook content receives a new hash and must be reviewed again.
+Both plugins declare their hook rules directly in `kimi.plugin.json` using the
+same fields as global `[[hooks]]` rules (`event`, `matcher`, `command`,
+`timeout`). Plugin hooks are active only while the plugin is enabled, run with
+their working directory set to the plugin root (so `./` paths resolve inside
+it), and receive `KIMI_CODE_HOME` and `KIMI_PLUGIN_ROOT` environment
+variables. Hook results follow the shared model: exit code 2 (or a JSON
+`permissionDecision: deny`) blocks, other failures fail open.
 
-HyperMemory hooks add hidden recall instructions and create bounded
-token-listener jobs without user-visible status messages. HyperColab hooks load
+HyperMemory hooks inject concise recall and fire-and-forget dispatch
+instructions without user-visible status messages. HyperColab hooks load
 project context, check writes against claims, and record structured activity.
 The HyperColab launcher degrades safely when its CLI is missing: it explains
 the prerequisite at session start and does not block writes in an unconfigured
@@ -100,36 +100,28 @@ environment.
 
 ## Agent packaging
 
-The current OpenAI plugin manifest supports skills, MCP servers, apps, hooks,
-and presentation assets; it does not define a separate auto-installed custom
-agent registry. HyperMemory therefore exposes a slim implicit main skill and a
-second parent-only `$memory-writer` skill whose implicit invocation is disabled.
-The main skill passes that writer skill to a fresh host sub-agent:
+Each plugin ships custom agents under `agents/`, which Kimi Code discovers
+automatically as delegatable sub-agents while the plugin is enabled. Plugin
+agents rank below every other file source, so they can never shadow user-level
+or project agents.
 
-- `plugins/hypermemory/agents/memory-writer.md` defines HyperMemory finalization;
-  `$memory-writer` points hosts to that canonical contract.
-- `coordination-agent.md` defines delegated HyperColab timeline maintenance.
+- `plugins/hypermemory/agents/memory-writer.md` is the fresh fire-and-forget
+  writer: its tool allowlist grants only `mcp__hypermemory__*` and forbids
+  further delegation, and its body makes the memory-writer skill the sole
+  operating contract.
+- `plugins/hypercolab/agents/coordination-writer.md` is the bounded timeline
+  role: read-only file tools plus the HyperColab MCP server, no shell, no
+  further delegation.
 
-The skills instruct the host when to spawn these bounded roles, what context to
-provide, and how to prevent recursive delegation. The `agents/openai.yaml`
-files alongside each skill provide OpenAI skill interface metadata and MCP
-dependencies; they are not custom-agent TOML files.
+The skills instruct the main agent when to spawn these bounded roles, what
+context to provide, and how to prevent recursive delegation.
 
 ## Authentication boundaries
 
-- HyperMemory uses the hosted MCP's OAuth flow. Codex stores MCP OAuth state;
-  the plugin contains only the server URL.
+- HyperMemory uses the hosted MCP's OAuth flow (`/mcp-config login
+  hypermemory`). Kimi Code stores MCP OAuth state; the plugin contains only the
+  server URL.
 - HyperColab authenticates through `hypercolab login`. Credentials remain in
-  local HyperColab configuration and are not embedded in `.mcp.json`.
+  local HyperColab configuration and are not embedded in the manifest.
 - Token provenance and cost provenance are independent. The plugin never
   invents provider-actual billing data.
-
-## Surface behavior
-
-| Capability | ChatGPT | Codex |
-| --- | --- | --- |
-| HyperMemory hosted MCP and skill | Supported through MCP/plugin publication | Supported through Git marketplace or public directory |
-| HyperMemory exact local token delta | Not exposed by consumer ChatGPT | Supported through local rollout counters |
-| HyperColab skill | Supported where installed | Supported |
-| HyperColab local MCP shim and Git hooks | Requires a local surface able to launch the CLI | Supported in local CLI/app/IDE workflows |
-| Plugin lifecycle hooks | Surface-dependent | Supported after explicit trust |

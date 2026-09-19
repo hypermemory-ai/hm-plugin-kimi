@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "hypercolab": {
-      "command": "hypercolab",
-      "args": ["mcp"]
-    }
-  }
-}

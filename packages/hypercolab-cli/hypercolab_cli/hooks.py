@@ -38,15 +38,10 @@ def _hook_block(reason: str, event_name: str = "PreToolUse") -> dict[str, Any]:
 
 
 def _extract_file_paths(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    tool = payload.get("tool_name", "")
     tool_input = payload.get("tool_input") or {}
     for key in ("file_path", "path", "target_file"):
         if tool_input.get(key):
             return [{"path": tool_input[key], "operation": "modify"}]
-    if tool == "apply_patch":
-        command = str(tool_input.get("command") or tool_input.get("patch") or "")
-        paths = re.findall(r"^\*\*\* (?:Update|Add|Delete) File: (.+)$", command, re.MULTILINE)
-        return [{"path": path, "operation": "modify"} for path in paths]
     return []
 
 

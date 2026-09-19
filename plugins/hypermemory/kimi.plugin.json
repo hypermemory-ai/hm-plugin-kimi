@@ -1,0 +1,45 @@
+{
+  "name": "hypermemory",
+  "version": "2.9.2",
+  "description": "Always-on, relationship-aware memory for Kimi Code with OAuth MCP access, delegated persistence, and honest token telemetry.",
+  "author": "HyperMemory AI <info@hypermemory.io>",
+  "homepage": "https://www.hypermemory.io",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "knowledge-graph",
+    "mcp",
+    "oauth",
+    "kimi-code"
+  ],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "systemPromptPath": "./SYSTEM.md",
+  "mcpServers": {
+    "hypermemory": {
+      "url": "https://stage.hypermemory.io/mcp"
+    }
+  },
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "command": "python3 ./scripts/hypermemory_hook.py session-start",
+      "timeout": 10
+    },
+    {
+      "event": "UserPromptSubmit",
+      "command": "python3 ./scripts/hypermemory_hook.py user-prompt",
+      "timeout": 10
+    }
+  ],
+  "interface": {
+    "displayName": "HyperMemory",
+    "shortDescription": "Durable memory for every Kimi Code turn",
+    "longDescription": "Recall relevant context at the start of work, then delegate durable memory writes, timeline updates, and honest token telemetry to a fire-and-forget memory-writer sub-agent.",
+    "developerName": "Runstack Inc.",
+    "websiteURL": "https://www.hypermemory.io",
+    "brandColor": "#2875E5",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

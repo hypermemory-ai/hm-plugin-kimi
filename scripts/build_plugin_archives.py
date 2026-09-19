@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build deterministic OpenAI plugin review archives from marketplace sources."""
+"""Build deterministic Kimi Code plugin review archives from marketplace sources."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def _files(plugin: Path) -> list[Path]:
 
 def build(plugin_name: str) -> Path:
     plugin = PLUGINS / plugin_name
-    manifest_path = plugin / ".codex-plugin" / "plugin.json"
+    manifest_path = plugin / "kimi.plugin.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("name") != plugin_name:
         raise ValueError(f"manifest name mismatch for {plugin_name}")

@@ -1,10 +1,8 @@
 ---
 name: hypermemory
-description: >-
-  Use HyperMemory for scoped durable context without polluting the graph. Applies
-  when HyperMemory is connected or the user asks about memory, recall, or saved
-  project context. Retrieves only relevant memories and dispatches one bounded
-  fire-and-forget memory writer per turn.
+description: Use HyperMemory for scoped durable context without polluting the graph. Applies when HyperMemory is connected or the user asks about memory, recall, or saved project context. Retrieves only relevant memories and dispatches one bounded fire-and-forget memory writer per turn.
+type: prompt
+whenToUse: When the HyperMemory MCP server is connected, at the start of substantive work, or when the user asks about memory, recall, or saved project context.
 ---
 
 # HyperMemory MCP — Main Agent Protocol
@@ -112,9 +110,10 @@ and the active surface requires the main agent to perform the upload.
 
 ## Memory-writer dispatch
 
-Before every final response, spawn exactly one fresh fire-and-forget sub-agent
-and tell it to invoke `$memory-writer`. Use `fork_turns="none"` and a unique
-task name. Never reuse a writer.
+Before every final response, dispatch exactly one fresh fire-and-forget
+sub-agent (Agent tool, `run_in_background=true`) whose task is to act as the
+memory-writer for this turn, with the `memory-writer` skill as its sole
+operating contract. Use a unique task description. Never reuse a writer.
 
 Send a bounded contract with this shape:
 
@@ -166,11 +165,7 @@ Send a bounded contract with this shape:
   ],
   "timeline_summary": "request, material work, and outcome without transcript",
   "timeline_only": ["important transient facts that must not become nodes"],
-  "excluded": ["credentials, raw output, or other content the writer must ignore"],
-  "token_listener": {
-    "listener_path": "host path or null",
-    "job_path": "host path or null"
-  }
+  "excluded": ["credentials, raw output, or other content the writer must ignore"]
 }
 ```
 
@@ -187,7 +182,7 @@ Keep the contract small:
 - do not include raw prompts, full conversation history, hidden reasoning,
   credentials, complete command output, tool payloads, or large code bodies;
 - describe what changed, not everything discussed;
-- do not fabricate keys, relationships, or listener metadata.
+- do not fabricate keys or relationships.
 
 The writer independently decides whether to store, update, supersede, forget,
 or skip each candidate.

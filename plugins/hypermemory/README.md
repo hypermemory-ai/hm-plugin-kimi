@@ -1,9 +1,8 @@
-# HyperMemory plugin for ChatGPT and Codex
+# HyperMemory plugin for Kimi Code
 
-This universal plugin bundles a ChatGPT/Codex main-agent skill, a parent-only
-memory-writer skill with a strict quality gate, the OAuth-protected HyperMemory
-MCP server, and Codex lifecycle enforcement. The writer has separate
-token-reporting branches for ChatGPT and Codex.
+This Kimi Code plugin bundles a main-agent skill, a parent-only memory-writer
+skill with a strict quality gate, the `memory-writer` custom agent, the
+OAuth-protected HyperMemory MCP server, and always-on lifecycle hooks.
 
 ## Behavior
 
@@ -14,53 +13,41 @@ token-reporting branches for ChatGPT and Codex.
 - Memory-writer sub-agent: a fresh, turn-unique worker created without parent
   conversation history applies a durability gate, performs only justified graph
   changes, validates every changed node, writes one timeline entry, and reports
-  tokens once. The parent never waits for, polls, messages, or reads the worker.
-- Codex: trusted hooks enforce the lifecycle and read exact cumulative token
-  counters from the active rollout JSONL using a two-phase inspect/ack helper.
-  If local lifecycle preparation fails, the hook reports the problem and fails
-  open so it cannot block the user's chat. Its command resolves the currently
-  installed plugin version at execution time, so a running task does not retain
-  an executable path into a deleted previous-version cache directory.
-- ChatGPT: reports an uncertainty-labelled workload estimate because consumer
-  ChatGPT does not expose a stable local exact-usage file to plugins.
+  tokens once. The parent never waits for, polls, messages, or reads the
+  worker.
+- Lifecycle hooks inject concise recall and fire-and-forget dispatch
+  instructions on `SessionStart` and `UserPromptSubmit`. If local lifecycle
+  preparation fails, the hook reports the problem and fails open so it cannot
+  block the user's chat.
+- Tokens: Kimi Code does not expose local exact-usage counters to plugins, so
+  the writer submits one honest `self_estimated` report per turn. Uncertainty
+  and cost fields are omitted unless defensibly known; the plugin never labels
+  an estimate as client-exact.
 
-The token listener parses only `token_count` records. It does not return or
-upload prompts, model responses, tool arguments, or tool results.
+The manifest's `systemPromptPath` (`SYSTEM.md`) contributes the always-on
+recall-and-delegate instructions to the agent's system prompt while the plugin
+is enabled.
 
-Cached reads are reported separately and never included in the fresh-token
-total. Stable rollout identities prevent archived transcripts from being
-counted twice, and an implausible fresh-token spike is rejected before it can
-reach `hm_tokens`.
+## Install
 
-Codex cannot observe tokens produced after the final tool call of a turn. The
-listener carries that exact tail into the next successful report. If a session
-never receives another turn, its final tail remains unreported; the plugin does
-not falsely label a guess as client-exact.
+From a checkout of this repository, in a Kimi Code session:
 
-## Install from the public Git marketplace
-
-Install directly from GitHub:
-
-```bash
-codex plugin marketplace add hypermemory-ai/hm-plugins-openai
-codex plugin add hypermemory@hypermemory-ai
+```text
+/plugins install ./plugins/hypermemory
+/reload
 ```
 
-Restart the ChatGPT desktop app or start a new Codex session. Complete the
-OAuth sign-in when prompted. In Codex CLI, open `/hooks`, review the bundled
-hook definition, and trust it; Codex does not run non-managed plugin hooks until
-the user explicitly trusts their current hash.
+The plugin declares the hosted MCP inline:
 
-ChatGPT web local testing requires registering
-`https://stage.hypermemory.io/mcp` in developer mode. A public directory
-submission should use the **With MCP** flow and submit this MCP server directly;
-it does not require a checked-in `.app.json`.
+```text
+https://stage.hypermemory.io/mcp
+```
+
+Complete OAuth with `/mcp-config login hypermemory` when prompted. No API key
+is stored in the plugin package.
 
 ## Validate
 
 ```bash
-python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/hypermemory
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/hypermemory/skills/hypermemory
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/hypermemory/skills/memory-writer
 pytest -q tests/test_hypermemory_plugin.py
 ```

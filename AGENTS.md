@@ -1,18 +1,20 @@
 # Repository guidance
 
-This repository publishes two OpenAI plugins through one marketplace. Keep the
-plugins independently installable and do not introduce dependencies between
-their manifests.
+This repository publishes two Kimi Code plugins through one marketplace
+catalog. Keep the plugins independently installable and do not introduce
+dependencies between their manifests.
 
 ## Invariants
 
-- Marketplace name: `hypermemory-ai`
+- Marketplace catalog: `.agents/plugins/marketplace.json` (Kimi marketplace
+  schema, version 2)
 - Plugin IDs and folders: `hypermemory`, `hypercolab`
-- OpenAI surfaces only; do not add formats or instructions for unrelated agent
-  ecosystems.
-- Keep `.codex-plugin/plugin.json` as the required manifest entry point.
+- Kimi Code surfaces only; do not add formats or instructions for unrelated
+  agent ecosystems.
+- Keep `kimi.plugin.json` at each plugin root as the required manifest entry
+  point.
 - Keep MCP credentials out of source. Use OAuth or local credential storage.
-- Preserve explicit hook trust and safe degraded behavior.
+- Preserve safe degraded (fail-open) hook behavior.
 - Keep HyperMemory recall on the main agent for substantive prompts and skip it
   only for narrowly classified lightweight social prompts.
 - Keep persistence/token reporting on one fresh fire-and-forget memory-writer
@@ -30,5 +32,5 @@ pytest -q
 python scripts/build_plugin_archives.py
 ```
 
-When Codex's authoring skills are installed, validate both plugin roots and both
-skills with their bundled validators.
+When changing manifests or hooks, also verify diagnostics in a live Kimi Code
+session with `/plugins info <id>` after `/plugins reload`.

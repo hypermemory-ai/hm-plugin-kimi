@@ -1,10 +1,9 @@
 ---
 name: memory-writer
-description: >-
-  Parent-only HyperMemory finalizer for one bounded turn contract. Use only
-  when the main HyperMemory skill explicitly dispatches a fresh sub-agent.
-  Applies a strict durability gate, writes sparse connected memories, validates
-  every change, records one timeline entry, and reports tokens once.
+description: Parent-only HyperMemory finalizer for one bounded turn contract. Use only when the main HyperMemory skill explicitly dispatches a fresh sub-agent. Applies a strict durability gate, writes sparse connected memories, validates every change, records one timeline entry, and reports tokens once.
+type: prompt
+whenToUse: Only when a parent turn dispatches a fresh fire-and-forget memory-writer sub-agent carrying a bounded versioned turn contract.
+disableModelInvocation: true
 ---
 
 # HyperMemory memory-writer protocol
@@ -27,9 +26,8 @@ HyperMemory skill. It may contain:
 - active project and anchor keys;
 - a short request and outcome;
 - zero or more durable candidates;
-- timeline-only information;
-- exclusions; and
-- optional token-listener and job paths.
+- timeline-only information; and
+- exclusions.
 
 Reject the assumption that every candidate must be stored. If the schema is
 missing or unsupported, or the contract is free-form, oversized, contains a
@@ -258,20 +256,12 @@ to make the turn look productive.
 
 Call `hm_tokens` exactly once after graph validation and the timeline entry.
 
-When the parent supplies a Codex listener and job path:
-
-1. inspect the job using the supplied listener and honest activity segments;
-2. submit the returned `hm_tokens_payload` once;
-3. acknowledge the job only after HyperMemory accepts that payload;
-4. if exact usage is unavailable, submit one honest estimate and follow the
-   listener's fallback instructions. Include uncertainty only when it can be
-   estimated defensibly.
-
-Without an exact listener, submit one `self_estimated` report. Both
-`uncertainty_percentage` and `cost_usd` are optional: include them only when
-they can be determined defensibly, and otherwise omit them. Use
-`cost_quality: unavailable` when no cost is supplied. Never invent an account
-identifier, provider event, exact cost, exact token count, or uncertainty.
+Kimi Code does not expose local exact-usage counters to plugins, so submit one
+`self_estimated` report. Both `uncertainty_percentage` and `cost_usd` are
+optional: include them only when they can be determined defensibly, and
+otherwise omit them. Use `cost_quality: unavailable` when no cost is supplied.
+Never invent an account identifier, provider event, exact cost, exact token
+count, or uncertainty.
 
 Activity categories must be unique and total 100. The substantive activity
 (`coding`, `writing`, `research`, `planning`, and so on) should outweigh memory

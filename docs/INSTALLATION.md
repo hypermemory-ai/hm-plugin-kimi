@@ -1,51 +1,55 @@
 # Installation
 
-This repository is a Git-backed Codex marketplace named `hypermemory-ai`.
-Registering it makes the catalog available; it does not install either plugin.
+This repository is a custom Kimi Code marketplace catalog named
+`hypermemory-ai`. Pointing Kimi Code at it makes the catalog available; it does
+not install either plugin.
 
 ## Prerequisites
 
-- A current Codex CLI or Codex in the ChatGPT desktop app
+- A current Kimi Code CLI (TUI session)
 - A HyperMemory account
 - Python 3.10 or newer and `pipx` for the HyperColab local shim
 
-## 1. Register the marketplace
+## 1. Add the marketplace
 
-```bash
-codex plugin marketplace add hypermemory-ai/hm-plugins-openai
+From a checkout of this repository, run inside a Kimi Code session:
+
+```text
+/plugins marketplace ./.agents/plugins/marketplace.json
 ```
 
-Confirm the source:
+A hosted JSON URL works the same way. You can also set
+`KIMI_CODE_PLUGIN_MARKETPLACE_URL` to the JSON location to override the
+default catalog.
 
-```bash
-codex plugin marketplace list
-```
-
-The catalog exposes two plugin IDs:
-
-- `hypermemory@hypermemory-ai`
-- `hypercolab@hypermemory-ai`
+The catalog exposes two plugin IDs: `hypermemory` and `hypercolab`.
 
 ## 2. Install HyperMemory
 
-```bash
-codex plugin add hypermemory@hypermemory-ai
+```text
+/plugins install ./plugins/hypermemory
 ```
 
-The plugin connects to:
+Or select it in the plugin manager (`/plugins`, Custom tab) after adding the
+marketplace. The plugin connects to:
 
 ```text
 https://stage.hypermemory.io/mcp
 ```
 
-Complete OAuth when prompted. No API key is stored in the plugin package. The
-server handles authorization-code flow, PKCE, refresh tokens, and dynamic
-client registration.
+The MCP server is enabled by default after installation. If OAuth is required,
+complete it with:
 
-Start a new task after installation so Codex loads the MCP server and bundled
-skill. In Codex CLI, run `/hooks`, review the HyperMemory hook definition, and
-trust it to enable lifecycle recall enforcement and the exact local token
-listener.
+```text
+/mcp-config login hypermemory
+```
+
+No API key is stored in the plugin package. The server handles
+authorization-code flow, PKCE, refresh tokens, and dynamic client
+registration.
+
+Run `/reload` or start a new session (`/new`) so the MCP server, bundled
+skills, and hooks are loaded.
 
 ## 3. Install HyperColab
 
@@ -60,8 +64,8 @@ hypercolab doctor
 
 Then install the plugin:
 
-```bash
-codex plugin add hypercolab@hypermemory-ai
+```text
+/plugins install ./plugins/hypercolab
 ```
 
 Inside a repository enrolled in HyperColab, optionally install the non-blocking
@@ -71,13 +75,19 @@ Git activity hooks:
 hypercolab hooks install
 ```
 
-Start a new task and run `/hooks` to review and trust the HyperColab lifecycle
-hooks. Repositories that are not registered with HyperColab remain unaffected.
+Run `/reload` or start a new session afterward. Repositories that are not
+registered with HyperColab remain unaffected.
 
 ## 4. Verify
 
+```text
+/plugins list
+/plugins info hypermemory
+/plugins info hypercolab
+/mcp
+```
+
 ```bash
-codex plugin list
 hypercolab status
 ```
 
@@ -89,75 +99,81 @@ Useful first prompts:
 
 ## Updates
 
-Refresh the Git catalog and reinstall the desired package:
+Reinstall the desired package from the refreshed source and run `/reload`:
+
+```text
+/plugins install ./plugins/hypermemory
+/plugins install ./plugins/hypercolab
+```
 
 ```bash
-codex plugin marketplace upgrade hypermemory-ai
-codex plugin add hypermemory@hypermemory-ai
-codex plugin add hypercolab@hypermemory-ai
 pipx upgrade hypercolab
 ```
 
-Start a new task after updating. If a hook changed, Codex will require review of
-the new definition because hook trust is tied to its exact content.
-
-When moving from HyperMemory 2.9.1 to 2.9.2, fully quit Codex before the update
-and reopen it afterward. Version 2.9.1 stored a version-specific executable path
-in running tasks. HyperMemory 2.9.2 resolves the currently installed version at
-hook execution time so later updates do not retain that deleted cache path.
+Local installations are copied to
+`$KIMI_CODE_HOME/plugins/managed/<id>/`; editing the original source
+directory after installation has no effect, so a reinstall is required to pick
+up changes.
 
 ## Removal
 
-```bash
-codex plugin remove hypermemory --marketplace hypermemory-ai
-codex plugin remove hypercolab --marketplace hypermemory-ai
-codex plugin marketplace remove hypermemory-ai
-pipx uninstall hypercolab
+```text
+/plugins remove hypermemory
+/plugins remove hypercolab
 ```
 
-Removing the marketplace does not delete data already stored in HyperMemory or
-HyperColab. Remove local HyperColab Git hooks before uninstalling the CLI if you
-installed them:
+Removing a plugin only deletes the installation record; the managed copy and
+original source files remain on disk. Remove local HyperColab Git hooks before
+uninstalling the CLI if you installed them:
 
 ```bash
 hypercolab hooks uninstall
+pipx uninstall hypercolab
 ```
 
-## ChatGPT surfaces
+Removing the plugins does not delete data already stored in HyperMemory or
+HyperColab.
 
-The Git marketplace is intended for Codex installation, local development, and
-workspace testing. Public one-click installation for normal ChatGPT and Codex
-users requires publishing through the universal Plugins Directory.
+## MCP server toggles
 
-For pre-publication HyperMemory testing in ChatGPT developer mode, register
-`https://stage.hypermemory.io/mcp` and use the bundled HyperMemory main skill
-plus its parent-only memory-writer skill. Since consumer ChatGPT does not expose
-Codex rollout JSONL counters, HyperMemory uses an uncertainty-labelled token
-estimate there.
+Each plugin's MCP servers can be disabled and re-enabled without removing the
+plugin:
 
-HyperColab's full behavior depends on its local stdio shim and Git context. It
-therefore requires a local coding surface that can execute `hypercolab`; a web
-chat without access to that process cannot provide repository claims or Git
-activity capture.
+```text
+/plugins mcp disable hypermemory hypermemory
+/plugins mcp enable hypermemory hypermemory
+/plugins mcp disable hypercolab hypercolab
+/plugins mcp enable hypercolab hypercolab
+```
+
+Run `/reload` after toggling so the change takes effect.
 
 ## Troubleshooting
 
 ### MCP tools are missing
 
-Confirm the plugin is installed and enabled, then start a new task. For
-HyperColab, also confirm `hypercolab` is on `PATH` with `hypercolab doctor`.
+Confirm the plugin is installed and enabled with `/plugins list`, then run
+`/reload` or start a new session. For HyperColab, also confirm `hypercolab` is
+on `PATH` with `hypercolab doctor`.
 
 ### Hooks do not run
 
-Run `/hooks`, inspect the source and current hash, and trust the definition.
-Hooks are non-managed and intentionally skipped until trusted.
+Check `/plugins info <id>` diagnostics for broken manifest fields or unsafe
+paths. Plugin hooks are active only while the plugin is enabled and fire on
+their matching lifecycle events.
 
 ### OAuth did not open
 
-For HyperMemory, invoke a HyperMemory MCP tool and complete the connection flow.
-For HyperColab, run `hypercolab login` directly in a terminal.
+For HyperMemory, run `/mcp-config login hypermemory` and complete the browser
+flow. For HyperColab, run `hypercolab login` directly in a terminal.
 
 ### A HyperColab write is blocked
 
 Run `hypercolab sync` to inspect current ownership. Coordinate a handoff or wait
 for the conflicting lease instead of bypassing a live claim.
+
+### The plugin changed but the session uses old behavior
+
+Run `/plugins reload`, then `/reload` or start a new session. In-flight
+requests keep their existing system prompt; prompt contributions converge on
+the next rebuild.

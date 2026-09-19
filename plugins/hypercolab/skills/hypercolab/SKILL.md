@@ -1,6 +1,8 @@
 ---
 name: hypercolab
 description: Coordinate work in a Hypercolab-enabled Git repository. Join and sync before planning, claim paths before edits, respect other agents' ownership, and record meaningful project activity.
+type: prompt
+whenToUse: When the current Git repository resolves to a Hypercolab project, before planning or editing coordinated files.
 ---
 
 # Hypercolab

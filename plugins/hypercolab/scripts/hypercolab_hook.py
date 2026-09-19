@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridge Codex lifecycle events to the installed HyperColab CLI.
+"""Bridge Kimi Code lifecycle events to the installed HyperColab CLI.
 
 The plugin keeps the MCP shim and hook implementation in one CLI package. This
 launcher makes hook behavior graceful when the CLI has not been installed yet:
@@ -36,7 +36,7 @@ def _binary() -> str | None:
 
 
 def _missing_cli_context(payload: dict[str, Any]) -> None:
-    event = str(payload.get("hook_event_name") or payload.get("hookEventName") or "")
+    event = str(payload.get("hook_event_name") or "")
     if event != "SessionStart":
         return
     print(

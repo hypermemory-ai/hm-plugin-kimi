@@ -108,23 +108,25 @@ def doctor() -> None:
 
 
 @app.command()
-def setup(
-    client: str = typer.Option("codex", help="OpenAI coding client to configure (codex)."),
-) -> None:
+def setup() -> None:
     """Configure project-scoped MCP files and install Git timeline hooks."""
 
     git = discover_git_context()
-    if client != "codex":
-        raise typer.BadParameter(f"Unknown client: {client}")
     written = []
     root_path = Path(git.root)
-    path = root_path / ".codex" / "config.toml"
+    path = root_path / ".kimi-code" / "mcp.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    marker = "[mcp_servers.hypercolab]"
-    if marker not in existing:
-        block = '\n[mcp_servers.hypercolab]\ncommand = "hypercolab"\nargs = ["mcp"]\n'
-        path.write_text(existing.rstrip() + block, encoding="utf-8")
+    existing: dict[str, Any] = {"mcpServers": {}}
+    if path.exists():
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict) and isinstance(loaded.get("mcpServers"), dict):
+                existing = loaded
+        except json.JSONDecodeError:
+            pass
+    if "hypercolab" not in existing["mcpServers"]:
+        existing["mcpServers"]["hypercolab"] = {"command": "hypercolab", "args": ["mcp"]}
+        path.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
     written.append(str(path))
     hooks = install_git_hooks(git.root)
     _print({"configured": written, "git_hooks": hooks})
