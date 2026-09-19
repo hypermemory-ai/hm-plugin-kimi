@@ -18,7 +18,7 @@ protection.
 ## Install
 
 ```bash
-pipx install "git+https://github.com/hypermemory-ai/hm-plugins-openai.git#subdirectory=packages/hypercolab-cli"
+pipx install "git+https://github.com/hypermemory-ai/hm-plugin-kimi.git#subdirectory=packages/hypercolab-cli"
 hypercolab login
 ```
 

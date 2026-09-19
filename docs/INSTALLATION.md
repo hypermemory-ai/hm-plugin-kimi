@@ -57,7 +57,7 @@ HyperColab resolves the current Git root, remote, branch, and worktree locally.
 Install its CLI and stdio MCP shim before installing the plugin:
 
 ```bash
-pipx install "git+https://github.com/hypermemory-ai/hm-plugins-openai.git#subdirectory=packages/hypercolab-cli"
+pipx install "git+https://github.com/hypermemory-ai/hm-plugin-kimi.git#subdirectory=packages/hypercolab-cli"
 hypercolab login
 hypercolab doctor
 ```

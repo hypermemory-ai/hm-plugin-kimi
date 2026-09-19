@@ -5,8 +5,8 @@ Thank you for improving the HyperMemory AI Kimi Code plugins.
 ## Development setup
 
 ```bash
-git clone https://github.com/hypermemory-ai/hm-plugins-openai.git
-cd hm-plugins-openai
+git clone https://github.com/hypermemory-ai/hm-plugin-kimi.git
+cd hm-plugin-kimi
 python -m pip install -e "packages/hypercolab-cli[dev]"
 ```
 

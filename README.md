@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hypermemory-ai/hm-plugins-openai/actions/workflows/validate.yml"><img alt="Validation" src="https://github.com/hypermemory-ai/hm-plugins-openai/actions/workflows/validate.yml/badge.svg" /></a>
+  <a href="https://github.com/hypermemory-ai/hm-plugin-kimi/actions/workflows/validate.yml"><img alt="Validation" src="https://github.com/hypermemory-ai/hm-plugin-kimi/actions/workflows/validate.yml/badge.svg" /></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2875E5.svg" /></a>
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-2875E5.svg" />
   <img alt="Kimi Code" src="https://img.shields.io/badge/agent-Kimi%20Code-2875E5.svg" />
@@ -54,7 +54,7 @@ installable Kimi Code plugins:
 
 ```text
 GitHub repository                    Marketplace catalog        Installable plugins
-hypermemory-ai/hm-plugins-openai  ->  .agents/plugins/     ->  hypermemory
+hypermemory-ai/hm-plugin-kimi    ->  .agents/plugins/     ->  hypermemory
                                      marketplace.json          hypercolab
 ```
 
@@ -124,7 +124,7 @@ prompted, then start a new session.
 HyperColab needs its local CLI/MCP shim before Kimi Code loads the plugin:
 
 ```bash
-pipx install "git+https://github.com/hypermemory-ai/hm-plugins-openai.git#subdirectory=packages/hypercolab-cli"
+pipx install "git+https://github.com/hypermemory-ai/hm-plugin-kimi.git#subdirectory=packages/hypercolab-cli"
 hypercolab login
 hypercolab doctor
 ```
@@ -484,8 +484,8 @@ durable data already stored by HyperMemory or HyperColab.
 ### Clone and create an environment
 
 ```bash
-git clone https://github.com/hypermemory-ai/hm-plugins-openai.git
-cd hm-plugins-openai
+git clone https://github.com/hypermemory-ai/hm-plugin-kimi.git
+cd hm-plugin-kimi
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e "packages/hypercolab-cli[dev]"
