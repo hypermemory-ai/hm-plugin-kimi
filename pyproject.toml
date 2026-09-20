@@ -7,4 +7,4 @@ select = ["B", "E", "F", "I", "UP"]
 ignore = ["B008"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages/hypercolab-cli/tests"]
+testpaths = ["tests"]

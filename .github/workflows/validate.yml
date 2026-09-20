@@ -1,4 +1,4 @@
-name: Validate marketplace
+name: Validate plugin
 
 on:
   pull_request:
@@ -18,10 +18,12 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install validation dependencies
-        run: python -m pip install -e "packages/hypercolab-cli[dev]"
+        run: python -m pip install ruff pytest
+      - name: Manifest at plugin root
+        run: test -f kimi.plugin.json
       - name: Lint
-        run: ruff check plugins packages tests scripts
+        run: ruff check scripts tests
       - name: Test
         run: pytest -q
-      - name: Build review archives
+      - name: Build review archive
         run: python scripts/build_plugin_archives.py

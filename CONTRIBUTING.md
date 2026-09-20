@@ -1,38 +1,36 @@
 # Contributing
 
-Thank you for improving the HyperMemory AI Kimi Code plugins.
+Thank you for improving the HyperMemory Kimi Code plugin.
 
 ## Development setup
 
 ```bash
 git clone https://github.com/hypermemory-ai/hm-plugin-kimi.git
 cd hm-plugin-kimi
-python -m pip install -e "packages/hypercolab-cli[dev]"
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install ruff pytest
 ```
-
-Create a focused branch, change only the plugin or shared catalog behavior in
-scope, and include tests for lifecycle or manifest changes.
 
 ## Quality checks
 
 ```bash
-ruff check plugins packages tests scripts
+ruff check scripts tests
 pytest -q
 python scripts/build_plugin_archives.py
 ```
 
-Then sanity-check both plugins in a live session: `/plugins install
-./plugins/hypermemory`, `/plugins info hypermemory`, `/plugins reload`, and
-confirm the diagnostics are clean.
+Then sanity-check in a live session: `/plugins install ./plugins/hypermemory`
+(local path works), `/plugins info hypermemory`, `/plugins reload`, and confirm
+the diagnostics are clean.
 
 ## Release checklist
 
-1. Increment the changed plugin's semantic version in `kimi.plugin.json`.
-2. Confirm the plugin id, folder name, and marketplace entry id match.
-3. Validate every referenced asset, skill, agent, hook, and MCP declaration.
-4. Review hook commands for safe failure behavior (fail-open) and plugin-root
+1. Increment the semantic version in `kimi.plugin.json`.
+2. Validate every referenced skill, agent, hook, and MCP declaration.
+3. Review hook commands for safe failure behavior (fail-open) and plugin-root
    relative paths.
-5. Confirm no credentials, tokens, test accounts, or private endpoints entered
+4. Confirm no credentials, tokens, test accounts, or private endpoints entered
    the package.
-6. Build fresh review ZIPs and test installation in a new Kimi Code session.
-7. Document user-visible changes.
+5. Build a fresh review ZIP and test installation in a new Kimi Code session.
+6. Document user-visible changes.

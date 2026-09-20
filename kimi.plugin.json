@@ -37,9 +37,6 @@
     "shortDescription": "Durable memory for every Kimi Code turn",
     "longDescription": "Recall relevant context at the start of work, then delegate durable memory writes, timeline updates, and honest token telemetry to a fire-and-forget memory-writer sub-agent.",
     "developerName": "Runstack Inc.",
-    "websiteURL": "https://www.hypermemory.io",
-    "brandColor": "#2875E5",
-    "composerIcon": "./assets/icon.png",
-    "logo": "./assets/logo.png"
+    "websiteURL": "https://www.hypermemory.io"
   }
 }

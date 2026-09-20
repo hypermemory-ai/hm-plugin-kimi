@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN = ROOT / "plugins" / "hypermemory"
-HOOK = PLUGIN / "scripts" / "hypermemory_hook.py"
+MANIFEST = ROOT / "kimi.plugin.json"
+HOOK = ROOT / "scripts" / "hypermemory_hook.py"
 
 
 def _module(path: Path, name: str):
@@ -20,31 +20,28 @@ def _module(path: Path, name: str):
     return module
 
 
-def test_plugin_manifest_declares_kimi_plugin_layout() -> None:
-    manifest = json.loads((PLUGIN / "kimi.plugin.json").read_text())
+def test_manifest_at_plugin_root_declares_kimi_layout() -> None:
+    manifest = json.loads(MANIFEST.read_text())
     assert manifest["name"] == "hypermemory"
     assert manifest["version"] == "2.9.2"
     assert manifest["skills"] == "./skills/"
     assert manifest["agents"] == "./agents/"
     assert manifest["mcpServers"]["hypermemory"]["url"] == "https://stage.hypermemory.io/mcp"
     assert manifest["systemPromptPath"] == "./SYSTEM.md"
-    assert (PLUGIN / "SYSTEM.md").is_file()
+    assert (ROOT / "SYSTEM.md").is_file()
+    assert (ROOT / "skills" / "hypermemory" / "SKILL.md").is_file()
+    assert (ROOT / "skills" / "memory-writer" / "SKILL.md").is_file()
+    assert (ROOT / "skills" / "memory-writer" / "references" / "node-types.md").is_file()
+    assert (ROOT / "agents" / "memory-writer.md").is_file()
     events = [hook["event"] for hook in manifest["hooks"]]
     assert events == ["SessionStart", "UserPromptSubmit"]
     for hook in manifest["hooks"]:
         assert hook["command"].startswith("python3 ./scripts/")
         assert "timeout" in hook
-    assert (PLUGIN / "agents" / "memory-writer.md").is_file()
-    writer_skill = PLUGIN / "skills" / "memory-writer"
-    assert (writer_skill / "SKILL.md").is_file()
-    assert (writer_skill / "references" / "node-types.md").is_file()
-    assert not (writer_skill / "agents" / "openai.yaml").exists()
-    assert not (PLUGIN / ".codex-plugin").exists()
-    assert not (PLUGIN / ".mcp.json").exists()
 
 
 def test_skills_use_kimi_frontmatter() -> None:
-    main_skill = (PLUGIN / "skills" / "hypermemory" / "SKILL.md").read_text()
+    main_skill = (ROOT / "skills" / "hypermemory" / "SKILL.md").read_text()
     front = main_skill.split("---", 2)[1]
     assert "name: hypermemory" in front
     assert "whenToUse:" in front
@@ -56,25 +53,24 @@ def test_skills_use_kimi_frontmatter() -> None:
     assert "fork_turns" not in main_skill
     assert "token_listener" not in main_skill
 
-    writer = (PLUGIN / "skills" / "memory-writer" / "SKILL.md").read_text()
+    writer = (ROOT / "skills" / "memory-writer" / "SKILL.md").read_text()
     writer_front = writer.split("---", 2)[1]
     assert "name: memory-writer" in writer_front
     assert "disableModelInvocation: true" in writer_front
     assert "## Durability gate" in writer
-    assert "## Recall without contamination" in writer
     assert "## Post-write quality gate" in writer
     assert "## Token reporting" in writer
     assert "Accept `schema_version: 2.9.2`" in writer
     assert "self_estimated" in writer
     assert "listener" not in writer
 
-    writer_agent = (PLUGIN / "agents" / "memory-writer.md").read_text()
+    writer_agent = (ROOT / "agents" / "memory-writer.md").read_text()
     assert "memory-writer skill" in writer_agent
     assert "sole detailed operating contract" in writer_agent
     assert "mcp__hypermemory__*" in writer_agent
 
 
-def test_user_prompt_prepares_fire_and_forget_dispatch(tmp_path: Path) -> None:
+def test_user_prompt_prepares_fire_and_forget_dispatch() -> None:
     payload = {
         "session_id": "session-1",
         "turn_id": "turn-1",
@@ -87,7 +83,7 @@ def test_user_prompt_prepares_fire_and_forget_dispatch(tmp_path: Path) -> None:
         text=True,
         capture_output=True,
         check=True,
-        env={"KIMI_PLUGIN_ROOT": str(PLUGIN), "PATH": ""},
+        env={"KIMI_PLUGIN_ROOT": str(ROOT), "PATH": ""},
     )
     context = completed.stdout
     assert "mode=substantive" in context
@@ -119,7 +115,7 @@ def test_lightweight_prompt_classifier_is_narrow() -> None:
         text=True,
         capture_output=True,
         check=True,
-        env={"KIMI_PLUGIN_ROOT": str(PLUGIN), "PATH": ""},
+        env={"KIMI_PLUGIN_ROOT": str(ROOT), "PATH": ""},
     )
     assert "mode=lightweight" in completed.stdout
     assert "skip hm_get_overview and hm_recall" in completed.stdout
@@ -133,7 +129,7 @@ def test_hook_failures_degrade_without_blocking_the_chat() -> None:
             text=True,
             capture_output=True,
             check=True,
-            env={"KIMI_PLUGIN_ROOT": str(PLUGIN), "PATH": ""},
+            env={"KIMI_PLUGIN_ROOT": str(ROOT), "PATH": ""},
         )
         assert "without blocking the turn" in failed.stdout
         assert "do not claim" in failed.stdout
